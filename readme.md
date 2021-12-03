@@ -37,8 +37,7 @@ mkdir -p ~/git
 cd ~/git
 git clone https://github.com/poikilos/nopackage.git ~/git/nopackage
 cd ~/git/nopackage
-mkdir -p ~/.local/bin
-cp "nopackage" ~/.local/bin/
+./install-as-symlink.sh
 # Change the following step if you are using a non-bash OS:
 echo "PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
 ```
