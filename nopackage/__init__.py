@@ -1171,7 +1171,7 @@ lib = os.path.join(local_path, "lib")
 
 oldLMP = os.path.join(AppDatas, "install_any", "local_machine.json")
 localMachineMetaPath = os.path.join(myAppData, "local_machine.json")
-oldLP = os.path.join(AppDatas, "install_any", "nopackage.log")
+oldLP = os.path.join(AppDatas, "install_any", "install_any.log")
 logPath = os.path.join(myAppData, "nopackage.log")
 
 if os.path.isfile(oldLMP):
@@ -1186,6 +1186,10 @@ if os.path.isfile(oldLP):
         error("* migrated an old log:")
         error("mv \"{}\" \"{}\""
               "".format(oldLP, logPath))
+    else:
+        error("WARNING: There is an old {} which should be prepended to the new {}.".format(oldLP, logPath))
+else:
+    error("INFO: There is no {}".format(oldLP))
 
 localMachine = {
     'programs': {}
