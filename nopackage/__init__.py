@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-install_any tries to install any program such as a zip or gz binary
+nopackage tries to install any program such as a zip or gz binary
 package, appimage, directory, or other file.
 
 Author: Jake Gustafson
@@ -9,32 +9,33 @@ License: GPLv3 or later (https://www.gnu.org/licenses/)
 Internet use: See iconLinks variable for what will be attempted when.
 
 USAGE:
-install_any.py <Program Name_version.AppImage>
-install_any.py <file.AppImage> <Icon Caption>
-install_any.py <file.deb> <Icon Caption>
-install_any.py <path> --move
-               ^ moves the directory to $HOME/.local/lib64
-install_any.py <path> --uninstall
-               ^ removes it from $HOME/.local/lib64
-                 and tries to recover the data to the original path from
-                 which it was installed (using local_machine.json).
-install_any.py --uninstall keepassxc
-                           ^ Use a known luid from local_machine.json
-                           or reinstall the same version (if you didn't
-                           delete the source after uninstall, which
-                           --uninstall had tried to recover) like:
-                           install_any.py --install keepassxc
-install_any.py <path> --reinstall
-               ^ removes it from $HOME/.local/lib64 first
+nopackage <Program Name_version.AppImage>
+nopackage <file.AppImage> <Icon Caption>
+nopackage <file.deb> <Icon Caption>
+nopackage <path> --move
+                 ^ moves the directory to $HOME/.local/lib64
+nopackage <path> --uninstall
+                 ^ removes it from $HOME/.local/lib64
+                   and tries to recover the data to the original path
+                   from which it was installed (using
+                   local_machine.json).
+nopackage --uninstall keepassxc
+                      ^ Use a known luid from local_machine.json
+                        or reinstall the same version (if you didn't
+                        delete the source after uninstall, which
+                        --uninstall had tried to recover) like:
+                        nopackage --install keepassxc
+nopackage <path> --reinstall
+                 ^ removes it from $HOME/.local/lib64 first
 
-install_any.py --help
-               ^ Show this help screen.
+nopackage --help
+          ^ Show this help screen.
 
 
 '''
 
 '''
-    install_any tries to install any folder or archived binary package.
+    nopackage tries to install any folder or archived binary package.
     Copyright (C) 2019  Jake "Poikilos" Gustafson
 
     This program is free software: you can redistribute it and/or modify
@@ -157,7 +158,7 @@ def debug(msg):
 digits = "0123456789"
 # me = os.path.split(sys.argv[0])[-1]
 # ^ doesn't work correctly if used as a module
-me = "install_any.py"
+me = "nopackage"
 myDir = os.path.dirname(os.path.abspath(__file__))
 repoDir = os.path.dirname(myDir)
 version_chars = digits + "."
@@ -861,9 +862,9 @@ class PackageInfo:
                 raise ValueError("The end of the program name (any of"
                                  " '{}' or '.' is not in {} and you"
                                  " didn't specify a version such as:\n"
-                                 " install_any.py {} --version x"
+                                 " {} {} --version x"
                                  "".format(PackageInfo.DELIMITERS,
-                                           fnamePartial, src_path))
+                                           fnamePartial, me, src_path))
             else:
                 error("WARNING: no version is in {}"
                       "".format(fnamePartial))
@@ -1156,10 +1157,10 @@ if profile is None:
         raise RuntimeError("USERPROFILE {} is used (since HOME is"
                            "not defined), but there is no {}"
                            "".format(profile, AppDatas))
-    myAppData = os.path.join(AppDatas, "install_any")
+    myAppData = os.path.join(AppDatas, "nopackage")
 else:
     AppDatas = os.path.join(profile, ".config")
-    myAppData = os.path.join(AppDatas, "install_any")
+    myAppData = os.path.join(AppDatas, "nopackage")
     local_path = os.path.join(profile, ".local")
     share_path = os.path.join(local_path, "share")
     icons_path = os.path.join(share_path, "pixmaps")
@@ -1168,8 +1169,24 @@ if not os.path.isdir(myAppData):
 lib64 = os.path.join(local_path, "lib64")
 lib = os.path.join(local_path, "lib")
 
+oldLMP = os.path.join(AppDatas, "install_any", "local_machine.json")
 localMachineMetaPath = os.path.join(myAppData, "local_machine.json")
-logPath = os.path.join(myAppData, "install_any.log")
+oldLP = os.path.join(AppDatas, "install_any", "nopackage.log")
+logPath = os.path.join(myAppData, "nopackage.log")
+
+if os.path.isfile(oldLMP):
+    if not os.path.isfile(localMachineMetaPath):
+        shutil.move(oldLMP, localMachineMetaPath)
+        error("* migrated old metadata:")
+        error("mv \"{}\" \"{}\""
+              "".format(oldLMP, localMachineMetaPath))
+if os.path.isfile(oldLP):
+    if not os.path.isfile(logPath):
+        shutil.move(oldLP, logPath)
+        error("* migrated an old log:")
+        error("mv \"{}\" \"{}\""
+              "".format(oldLP, logPath))
+
 localMachine = {
     'programs': {}
 }
@@ -2399,7 +2416,7 @@ def install_program_in_place(src_path, **kwargs):
         return ok
     return False
 
-if __name__ == "__main__":
+def main():
     print("")
     caption = None
     src_path = None
@@ -2474,3 +2491,6 @@ if __name__ == "__main__":
         multiVersion=multiVersion,
         version=version,
     )
+
+if __name__ == "__main__":
+    main()

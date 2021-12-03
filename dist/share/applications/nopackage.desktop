@@ -1,17 +1,14 @@
 [Desktop Entry]
 Version=1.0
 Encoding=UTF-8
-Name=install_any
-Name[en_US]=install_any
-GenericName=install_any
-GenericName[en_US]=install_any
+Name=nopackage
+Name[en_US]=nopackage
+GenericName=nopackage
+GenericName[en_US]=nopackage
 Categories=System;
-Comment=install_any
-Comment[en_US]=
-Exec=/home/owner/git/linux-preinstall/utilities/install_any.py
-#Icon=/home/owner/.icons/MacOS-X/48x48/apps/gnome-globe.png
+Comment=Install any program with nopackage.
+Comment[en_US]=Install any program with nopackage.
 MimeType=;
-Path=/home/owner/git/linux-preinstall
 StartupNotify=true
 Terminal=false
 TerminalOptions=--noclose
