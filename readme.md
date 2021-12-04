@@ -89,8 +89,9 @@ You can enable `--multi-version` to install multiple copies of a program
 with different versions. It will be enabled automatically if the
 program is usually `--multi-version` when installed manually, such as
 Blender (If you're installing Blender manually for some other reason,
-there is no penalty--`--multi-version` simply makes a separate shortcut icon
-that says the version in the caption after the name of the program).
+there is no penalty--in that case, `--multi-version` simply makes a
+separate shortcut icon that says the version in the caption after the
+name of the program).
 
 #### sc_name
 The `sc_name` is the package named (named `sc_name` since it is also the
