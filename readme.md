@@ -20,22 +20,22 @@ This software was formerly a script in https://github.com/poikilos/linux-preinst
 
 
 ## Author and license
-Author: Jake "Poikilos" Gustafson
-License: See license.txt
+- Author: Jake "Poikilos" Gustafson
+- License: See [license.txt](license.txt).
 
 
 ## Automatic Downloads
 This script will try to download the icon if an icon isn't known to be
 included but is known to be online. You can see the list of possible
-URLs that will be accessed by viewing the iconLinks dictionary in
-pynopackage/__init__.py.
+URLs that will be accessed by viewing the `iconLinks` dictionary in
+[nopackage/__init__.py](nopackage/__init__.py).
 
 
 ## Install
 ```
 pip install --user https://github.com/poikilos/nopackage/archive/refs/heads/main.zip
 ```
-- Or use `venv` so that testing and packaging dependencies is more clear.
+- Or use `venv` so that testing and packaging dependencies and knowing versions of dependencies and python are more clear.
 
 ### Install symlinks only
 This install method is probably only helpful if you are a developer and
@@ -66,7 +66,13 @@ unless you specify such strings manually (they will be passed on to the
 install_program_in_place function then to PackageInfo init).
 
 ### luid
-The luid is a "locally-unique ID" that represents the program. If
+The `luid` is a "locally-unique ID" that represents the program. It
+adheres to the "UNIX name" scheme as much as possible. Where the
+generated `luid` doesn't match the "UNIX name" of the project being
+installed, the `luid` should be set to the proper UNIX name when
+constructing PackageInfo. The `luid` is a primary key that is used to
+connect a uniquely identifiable program to a list of packages of
+different types or versions that you may have installed. If
 multiVersion is enabled, see the "sc_name" section.
 
 #### Uninstalling or installing using luid
@@ -81,7 +87,7 @@ examples, see the docstring of the main py file.
 You can enable multiVersion to install multiple copies of a program
 with different versions. It will be enabled automatically if the
 program is usually multiversion when installed manually, such as
-blender (If you're installing blender manually for some other reason,
+blender (If you're installing Blender manually for some other reason,
 there is no penalty--multiVersion simply makes a separate shortcut icon
 that says the version in the caption after the name of the program).
 
@@ -93,3 +99,16 @@ name will uniquely identify the program in case multiVersion is
 enabled, but the luid will also remain as a way to track the package
 back to a unique program (in 'programs' in local_machine.json). If
 multiVersion is not enabled, `sc_name` will be.
+
+
+## Developer Notes:
+### Testing
+(requires nose such as the `python3-nose` package (`python3-nose2` wasn't tried here and requires several `libjs-*` packages.))
+```bash
+if [ -f "`command -v outputinspector`" ]; then
+  nosetests3 1>out.txt 2>err.txt
+  outputinspector
+else
+  nosetests3
+fi
+```

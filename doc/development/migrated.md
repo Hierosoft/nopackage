@@ -40,9 +40,18 @@ HOME/.config/geany/geany.conf
 dist/share/applications/install_any.desktop
 install_ia-nonroot.sh
 shortcut-metadata/blender.txt
-clean-lbry.py (removed by accident but re-added in a later commit)
-tame-lbry.py (removed by accident but re-added in a later commit)
+
+Removed by accident but re-added in later commit(s)
+(and removed from the loop further down so they are kept):
+clean-lbry.py
+tame-lbry.py
 ^ required by "Clean LBRY" icon installed by nopackage
+
+Removed by accident since not in utilities directory but re-added in later commit(s):
+tests.py (as nopackage/tests/test_nopackage.py) -- It requires the following 3 files that were missed for the same reason:
+tests/data/exit1.sh
+tests/some_program-1.0.0.dummy
+tests/someprogram-1.0/dummy
 
 Removed: Only in linux-preinstall but nopackage should eventually get the functionality:
 install-geany-plugin.sh

@@ -2,3 +2,6 @@ include nopackage/dist/share/applications/*
 include nopackage/HOME/.config/geany/*
 include nopackage/shortcut-metadata/*
 include nopackage/*.py
+include nopackage/tests/*.py
+include readme.md
+include license.txt

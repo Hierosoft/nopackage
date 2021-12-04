@@ -4,7 +4,6 @@ import sys
 #   https://github.com/poikilos/pypicolcd/blob/master/setup.py
 # - For nose, see https://github.com/poikilos/mgep/blob/master/setup.py
 
-
 python_mr = sys.version_info.major
 versionedModule = {}
 versionedModule['urllib'] = 'urllib'
@@ -45,10 +44,12 @@ setuptools.setup(
     entry_points={
         'console_scripts': ['nopackage=nopackage:main'],
     },
-    install_requires=[],
+    install_requires=[
+    ],
     #     versionedModule['urllib'],
-    # ],
     # ^ "ERROR: Could not find a version that satisfies the requirement urllib (from nopackage) (from versions: none)
     # ERROR: No matching distribution found for urllib"
-
+    test_suite='nose.collector',
+    tests_require='nose', 'nose-cover3'],
+    zip_safe=False, # It can't run zipped due to needing data files.
  )
