@@ -60,7 +60,7 @@ run will try to regenerate it from
 multi-version data, so the generated metadata will only refer to the
 last version installed using nopackage) unless you delete that too.
 The install or uninstall process will try to derive the version,
-shortcut caption string, unique program name (called "luid" in the
+shortcut caption string, unique program name (called `luid` in the
 code), and package name from the filename or directory name provided,
 unless you specify such strings manually (they will be passed on to the
 install_program_in_place function then to PackageInfo init).
@@ -73,32 +73,34 @@ installed, the `luid` should be set to the proper UNIX name when
 constructing PackageInfo. The `luid` is a primary key that is used to
 connect a uniquely identifiable program to a list of packages of
 different types or versions that you may have installed. If
-multiVersion is enabled, see the "sc_name" section.
+`--multi-version` is enabled, see the "sc_name" section.
 
 #### Uninstalling or installing using luid
-If you know the luid (locally-unique ID) of a program and it is in the
+If you know the `luid` (locally-unique ID) of a program and it is in the
 programs object in local_machine.json, you can uninstall the program
-using the luid (otherwise you need the full path of the source, which
-may be inaccessible). You can obtain the luid of any installed program
+using the `luid` (otherwise you need the full path of the source, which
+may be inaccessible). You can obtain the `luid` of any installed program
 by reviewing local_machine.json after the first run of the program. For
-examples, see the docstring of the main py file.
+example: `nopackage --uninstall keepassxc` (See also the beginning of
+[__init__.py](nopackage/__init__.py)).
 
 ### Multi-version support
-You can enable multiVersion to install multiple copies of a program
+You can enable `--multi-version` to install multiple copies of a program
 with different versions. It will be enabled automatically if the
-program is usually multiversion when installed manually, such as
-blender (If you're installing Blender manually for some other reason,
-there is no penalty--multiVersion simply makes a separate shortcut icon
+program is usually `--multi-version` when installed manually, such as
+Blender (If you're installing Blender manually for some other reason,
+there is no penalty--`--multi-version` simply makes a separate shortcut icon
 that says the version in the caption after the name of the program).
 
 #### sc_name
 The `sc_name` is the package named (named `sc_name` since it is also the
 shortcut filename--See 'packages' in local_machine.json, which will
-only be populated in cases where multiVersion is enabled). The package
-name will uniquely identify the program in case multiVersion is
-enabled, but the luid will also remain as a way to track the package
+only be populated in cases where `--multi-version` is enabled). The package
+name will uniquely identify the program in case `--multi-version` is
+enabled, but the `luid` will also remain as a way to track the package
 back to a unique program (in 'programs' in local_machine.json). If
-multiVersion is not enabled, `sc_name` will be.
+`--multi-version` is not enabled, `sc_name` will be the same as `luid`
+but may have a vendor prefix also.
 
 
 ## Developer Notes:
