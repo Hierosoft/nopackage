@@ -1,0 +1,4 @@
+include nopackage/dist/share/applications/*
+include nopackage/HOME/.config/geany/*
+include nopackage/shortcut-metadata/*
+include nopackage/*.py

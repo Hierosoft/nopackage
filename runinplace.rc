@@ -1,0 +1,16 @@
+if [ "@$PREFIX" = "@" ]; then
+    PREFIX="$HOME/.local"
+fi
+src_repo="`pwd`"
+src_lib="$src_repo/nopackage"
+dst_libs="$HOME/.local/lib"
+dst_lib="$dst_libs/nopackage"
+src_exe="$src_lib/__init__.py"
+if [ ! -f "$src_exe" ]; then
+    printf "Error: $src_exe is missing. Run this script from the nopackage repo"
+    if [ -f "__init__.py" ]; then
+        printf " not the nopackage/nopackage module directory"
+    fi
+    echo "."
+    exit 1
+fi

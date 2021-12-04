@@ -1,36 +1,41 @@
 #!/bin/bash
-if [ "@$PREFIX" = "@" ]; then
-    PREFIX="$HOME/.local"
-fi
-src_repo="`pwd`"
-src_lib="$src_repo/nopackage"
-dst_libs="$HOME/.local/lib"
-dst_lib="$dst_libs/nopackage"
-src_exe="$src_lib/__init__.py"
-if [ ! -f "$src_exe" ]; then
-    printf "Error: $src_exe is missing. Run this script from the nopackage repo"
-    if [ -f "__init__.py" ]; then
-        printf " not the nopackage/nopackage module directory"
-    fi
-    echo "."
+echo
+. runinplace.rc
+if [ $? -ne 0 ]; then
+    echo "Error: runinplace.rc didn't run successfully. You must run this script from the nopackage repo (the same directory as runinplace.rc)"
     exit 1
 fi
+
+src_sc="nopackage/dist/share/applications/nopackage.desktop"
+if [ ! -f "$src_sc" ]; then
+    echo "Error: \"$src_sc\" is missing. You must run this script from the nopackage repo (the same directory as runinplace.rc)"
+    exit 1
+fi
+
 
 if [ -z "$FORCE" ]; then
     FORCE=false
 fi
 
+UNINSTALL=false
+
 for arg in "$@"
 do
     if [ "@$arg" == "@--force" ]; then
         FORCE=true
+    elif [ "@$arg" == "@--uninstall" ]; then
+        UNINSTALL=true
     else
         echo "Error: \"$arg\" is not a valid option."
         exit 1
     fi
 done
-
-if [ ! -d "$dst_libs" ]; then
+verb="install"
+redo_verb="reinstall"
+if [ "@$UNINSTALL" = "@true" ]; then
+    verb="uninstall"
+    redo_verb="uninstall"
+elif [ ! -d "$dst_libs" ]; then
     mkdir -p "$dst_libs"
     if [ $? -ne 0 ]; then exit 1; fi
 fi
@@ -42,8 +47,9 @@ if [ -d "$dst_lib" ]; then
         if [ "@$FORCE" = "@true" ]; then
             rm -Rf "$dst_lib"
             if [ $? -ne 0 ]; then exit 1; fi
+            echo "* removed existing $dst_lib (real directory, not symlink)"
         else
-            echo "Error: \"$dst_lib\" already exists and isn't a symlink. Use --force to delete the entire directory and reinstall."
+            echo "Error: \"$dst_lib\" already exists and isn't a symlink. Use --force to delete the entire directory and $redo_verb."
             exit 1
         fi
     fi
@@ -52,31 +58,47 @@ fi
 if [ -f "$dst_lib/__init__.py" ]; then
     existing_src="`readlink $dst_lib`"
     if [ -z "$existing_src" ]; then
-        echo "Error: There is a logic error in the install script. The existing src is not a symlink but that should already have been addressed (if --force) or returned an exit code."
+        echo "Error: There is a logic error in $0 $@. The existing src is not a symlink but that should already have been addressed (if --force) or returned an exit code."
         exit 1
     fi
-    if [ "$existing_src" != "$src_lib" ]; then
-        if [ "@$FORCE" = "@true" ]; then
-            rm "$dst_lib"
-            # ^ rm shouldn't be recursive here because it is a symlink to a directory not a directory.
-            if [ $? -ne 0 ]; then exit 1; fi
-        else
-            echo "Error: \"$dst_lib\" already exists but points to \"$existing_src\". Use --force to change the symlink to point to \"$src_lib\" and reinstall."
-            exit 1
+    if [ "@$UNINSTALL" = "@true" ]; then
+        printf "* removing $dst_lib (pointed to $existing_src)..."
+        rm "$dst_lib"
+        if [ $? -ne 0 ]; then exit 1; fi
+        echo "OK"
+    else
+        if [ "$existing_src" != "$src_lib" ]; then
+            if [ "@$FORCE" = "@true" ]; then
+                printf "* removing $dst_lib (pointed to different source: $existing_src)..."
+                rm "$dst_lib"
+                # ^ rm shouldn't be recursive here because it is a symlink to a directory not a directory.
+                if [ $? -ne 0 ]; then exit 1; fi
+                echo "OK"
+            else
+                echo "Error: \"$dst_lib\" already exists but points to \"$existing_src\". Use --force to change the symlink to point to \"$src_lib\" and $redo_verb."
+                exit 1
+            fi
         fi
     fi
-fi
-
-if [ ! -f "$dst_lib/__init__.py" ]; then
-    ln -s "$src_lib" "$dst_lib"
-    if [ $? -ne 0 ]; then exit 1; fi
 else
-    existing_src="`readlink $dst_lib`"
-    if [ "$existing_src" != "$src_lib" ]; then
-        echo "Error: There is a logic error in the script. The existing \"$dst_lib\" is a symlink that points to the some other source (\"$existing_src\") instead of \"$src_lib\"but that should have been addressed above (if --force) or returned an exit code."
-        exit 1
+    if [ "@$UNINSTALL" = "@true" ]; then
+        echo "* \"$dst_lib\"...OK (already uninstalled)"
     fi
-    echo "* using existing symlink \"dst_lib\" since it already points to \"$src_lib\""
+fi
+if [ "@$UNINSTALL" != "@true" ]; then
+    if [ ! -f "$dst_lib/__init__.py" ]; then
+        printf "* installing $dst_lib..."
+        ln -s "$src_lib" "$dst_lib"
+        if [ $? -ne 0 ]; then exit 1; fi
+        echo "OK"
+    else
+        existing_src="`readlink $dst_lib`"
+        if [ "$existing_src" != "$src_lib" ]; then
+            echo "Error: There is a logic error in the script. The existing \"$dst_lib\" is a symlink that points to the some other source (\"$existing_src\") instead of \"$src_lib\"but that should have been addressed above (if --force) or returned an exit code."
+            exit 1
+        fi
+        echo "* using existing symlink \"dst_lib\" since it already points to \"$src_lib\""
+    fi
 fi
 
 src_bin="$src_lib/__init__.py"
@@ -89,28 +111,40 @@ if [ -f "$dst_bin" ]; then
         if [ "@$FORCE" = "@true" ]; then
             rm "$dst_bin"
             if [ $? -ne 0 ]; then exit 1; fi
-            echo "* removed old \"$dst_bin\""
+            echo "* removed existing \"$dst_bin\""
         else
-            echo "Error: The existing \"$dst_bin\" is not a symlink. Use --force to remove it and make it a link to $src_bin."
+            if [ "@$UNINSTALL" = "@true" ]; then
+                echo "Error: The existing \"$dst_bin\" is not a symlink. Use --force to remove it anyway to completely $verb."
+            else
+                echo "Error: The existing \"$dst_bin\" is not a symlink. Use --force to remove it and make it a link to $src_bin."
+            fi
             exit 1
         fi
     elif [ "$existing_src_bin" != "$src_bin" ]; then
         rm "$dst_bin"
         if [ $? -ne 0 ]; then exit 1; fi
-        echo "* removed old \"$dst_bin\""
+        echo "* removed \"$dst_bin\" (It was linked to a different binary: \"$existing_src_bin\")"
     else
-        echo "* using existing $dst_bin since it already points to \"$src_bin\""
+        if [ "@$UNINSTALL" = "@true" ]; then
+            rm "$dst_bin"
+            if [ $? -ne 0 ]; then exit 1; fi
+            echo "* removed \"$dst_bin\""
+        else
+            echo "* using existing $dst_bin since it already points to \"$src_bin\""
+        fi
     fi
 fi
-if [ "$existing_src_bin" != "$src_bin" ]; then
-    printf "* installing $dst_bin..."
-    ln -s "$src_bin" "$dst_bin"
-    code=$?
-    if [ $code -eq 0 ]; then
-        echo "OK"
-    else
-        echo "FAILED"
-        exit $code
+if [ "@$UNINSTALL" != "@true" ]; then
+    if [ "$existing_src_bin" != "$src_bin" ]; then
+        printf "* installing $dst_bin..."
+        ln -s "$src_bin" "$dst_bin"
+        code=$?
+        if [ $code -eq 0 ]; then
+            echo "OK"
+        else
+            echo "FAILED (line $LINENO)"
+            exit $code
+        fi
     fi
 fi
 
@@ -121,15 +155,34 @@ if [ -f "$OLD_dst_sc" ]; then
     echo "* removed deprecated $OLD_dst_sc"
 fi
 
-src_sc="dist/share/applications/nopackage.desktop"
 dst_sc="$PREFIX/share/applications/nopackage.desktop"
-printf "* copying \"$dst_sc\"..."
-cp "$src_sc" "$dst_sc"
+if [ "@$UNINSTALL" = "@true" ]; then
+    if [ -f "$dst_sc" ]; then
+        printf "* removing \"$dst_sc\"..."
+        rm "$dst_sc"
+        code=$?
+        if [ $code -eq 0 ]; then
+            echo "OK"
+        else
+            echo "FAILED (line $LINENO)"
+            exit $code
+        fi
+    else
+        echo "* \"$dst_sc\"...OK (already uninstalled)"
+    fi
+    echo
+    echo "Uninstall is complete."
+    echo
+    exit 0
+else
+    printf "* copying \"$dst_sc\"..."
+    cp "$src_sc" "$dst_sc"
+fi
 code=$?
 if [ $code -eq 0 ]; then
     echo "OK"
 else
-    echo "FAILED"
+    echo "FAILED (line $LINENO)"
     exit $code
 fi
 echo "Path=$HOME/.local/lib/nopackage" >> "$dst_sc"
@@ -142,6 +195,10 @@ code=$?
 if [ $code -eq 0 ]; then
     echo "OK"
 else
-    echo "FAILED"
+    echo "FAILED ($LINENO)"
     exit $code
 fi
+
+echo
+echo "Install is complete."
+echo

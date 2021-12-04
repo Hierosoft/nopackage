@@ -33,6 +33,14 @@ pynopackage/__init__.py.
 
 ## Install
 ```
+pip install --user https://github.com/poikilos/nopackage/archive/refs/heads/main.zip
+```
+- Or use `venv` so that testing and packaging dependencies is more clear.
+
+### Install symlinks only
+This install method is probably only helpful if you are a developer and
+want your code changes in the repo to instantly affect the system.
+```
 mkdir -p ~/git
 cd ~/git
 git clone https://github.com/poikilos/nopackage.git ~/git/nopackage
@@ -41,6 +49,7 @@ cd ~/git/nopackage
 # Change the following step if you are using a non-bash OS:
 echo "PATH=\$PATH:$HOME/.local/bin" >> ~/.bashrc
 ```
+
 
 ## Metadata
 The metadata for each installed or uninstalled program is stored

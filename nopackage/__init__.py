@@ -161,6 +161,14 @@ digits = "0123456789"
 me = "nopackage"
 myDir = os.path.dirname(os.path.abspath(__file__))
 repoDir = os.path.dirname(myDir)
+distPath = os.path.join(myDir, "dist")
+distGoodFlag = os.path.join(distPath, "share", "applications", "nopackage.desktop")
+if not os.path.isfile(distGoodFlag):
+    raise RuntimeError("The file {} is missing. Make sure nopackage is"
+                       " installed correctly."
+                       "".format(distGoodFlag))
+else:
+    error("* Checking for {}...OK".format(distGoodFlag))
 version_chars = digits + "."
 
 # The following dictionaries contain information that can't be derived

@@ -1,12 +1,19 @@
 import setuptools
-
-# - For another example, see
+import sys
+# - For the example on which this was based, see
 #   https://github.com/poikilos/pypicolcd/blob/master/setup.py
 # - For nose, see https://github.com/poikilos/mgep/blob/master/setup.py
 
+
+python_mr = sys.version_info.major
+versionedModule = {}
+versionedModule['urllib'] = 'urllib'
+if python_mr == 2:
+    versionedModule['urllib'] = 'urllib2'
 long_description = ""
 with open("readme.md", "r") as fh:
     long_description = fh.read()
+
 setuptools.setup(
     name='nopackage',
     version='0.9.0',
@@ -38,7 +45,10 @@ setuptools.setup(
     entry_points={
         'console_scripts': ['nopackage=nopackage:main'],
     },
-    install_requires=[
-        'urllib'
-    ]
+    install_requires=[],
+    #     versionedModule['urllib'],
+    # ],
+    # ^ "ERROR: Could not find a version that satisfies the requirement urllib (from nopackage) (from versions: none)
+    # ERROR: No matching distribution found for urllib"
+
  )
