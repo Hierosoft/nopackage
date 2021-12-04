@@ -35,21 +35,21 @@ nopackage --help
 '''
 
 '''
-    nopackage tries to install any folder or archived binary package.
-    Copyright (C) 2019  Jake "Poikilos" Gustafson
+nopackage tries to install any folder or archived binary package.
+Copyright (C) 2019  Jake "Poikilos" Gustafson
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import sys
 import stat
@@ -168,7 +168,8 @@ if not os.path.isfile(distGoodFlag):
                        " installed correctly."
                        "".format(distGoodFlag))
 else:
-    error("* Checking for {}...OK".format(distGoodFlag))
+    pass
+    # error("* Checking for {}...OK".format(distGoodFlag))
 version_chars = digits + "."
 
 # The following dictionaries contain information that can't be derived
@@ -1195,9 +1196,11 @@ if os.path.isfile(oldLP):
         error("mv \"{}\" \"{}\""
               "".format(oldLP, logPath))
     else:
-        error("WARNING: There is an old {} which should be prepended to the new {}.".format(oldLP, logPath))
+        error("WARNING: There is an old {} which should be prepended to"
+              " the new {}.".format(oldLP, logPath))
 else:
-    error("INFO: There is no {}".format(oldLP))
+    pass
+    # error("INFO: There is no {}".format(oldLP))
 
 localMachine = {
     'programs': {}
@@ -1219,7 +1222,8 @@ def getValueFromSymbol(valueStr, lineN=-1, path="(generated)"):
 
     Keyword arguments:
     path -- The file (used for error reporting only).
-    lineN -- The line number in the file (used for error reporting only).
+    lineN -- The line number in the file (used for error reporting
+        only).
     '''
     valueL = None
     if valueStr is not None:
