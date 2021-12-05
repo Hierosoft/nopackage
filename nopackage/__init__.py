@@ -2275,9 +2275,16 @@ def install_program_in_place(src_path, **kwargs):
     setProgramValue(luid, 'src_path', src_path)
 
     if multiVersion:
-        gotMeta = self.toDict()
-        for k,v in gotMeta.items():
-            setPackageValue(sc_name, k, v)
+        '''
+        if thisPkg is not None:
+            gotMeta = thisPkg.toDict()
+            for k,v in gotMeta.items():
+                setPackageValue(sc_name, k, v)
+        else:
+            error("WARNING: thisPkg is None after move_what, so the"
+                  " derived metadata won't be recorded.")
+        '''
+        # ^ thisPkg referenced before assignment
         setPackageValue(sc_name, 'dst_dirpath', dst_dirpath)
     else:
         setProgramValue(luid, 'dst_dirpath', dst_dirpath)

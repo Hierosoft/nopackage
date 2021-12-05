@@ -50,6 +50,6 @@ setuptools.setup(
     # ^ "ERROR: Could not find a version that satisfies the requirement urllib (from nopackage) (from versions: none)
     # ERROR: No matching distribution found for urllib"
     test_suite='nose.collector',
-    tests_require='nose', 'nose-cover3'],
+    tests_require=['nose', 'nose-cover3'],
     zip_safe=False, # It can't run zipped due to needing data files.
  )

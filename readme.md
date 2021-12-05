@@ -2,8 +2,8 @@
 Install **any** software (including deb) using ONE COMMAND on **any** GNU-like OS!
 
 Automate the installation of any source with zero configuration. The
-source can be a zip or gz binary package, appimage, directory, or
-executable file.
+source can be a zip, gz or any other tar-compatible binary package,
+appimage, directory, or executable file.
 
 Step 1: nopackage <packagename>
 - There is only one step!
@@ -16,7 +16,7 @@ Install an archive (deb, zip, gz, bz2), binary (including appimage) or directory
 - If it is a binary (including appimage), that will be detected and handled properly!
 - If there is no icon, and the icon is in `iconLinks`, that will be downloaded and used!
 
-This software was formerly a script in https://github.com/poikilos/linux-preinstall/utilities.
+This software was formerly a script in <https://github.com/poikilos/linux-preinstall/utilities>.
 
 
 ## Author and license
@@ -28,7 +28,7 @@ This software was formerly a script in https://github.com/poikilos/linux-preinst
 This script will try to download the icon if an icon isn't known to be
 included but is known to be online. You can see the list of possible
 URLs that will be accessed by viewing the `iconLinks` dictionary in
-[nopackage/__init__.py](nopackage/__init__.py).
+[`nopackage/__init__.py`](nopackage/__init__.py).
 
 
 ## Install
@@ -82,7 +82,7 @@ using the `luid` (otherwise you need the full path of the source, which
 may be inaccessible). You can obtain the `luid` of any installed program
 by reviewing local_machine.json after the first run of the program. For
 example: `nopackage --uninstall keepassxc` (See also the beginning of
-[__init__.py](nopackage/__init__.py)).
+[`nopackage/__init__.py`](nopackage/__init__.py)).
 
 ### Multi-version support
 You can enable `--multi-version` to install multiple copies of a program
@@ -115,3 +115,8 @@ else
   nosetests3
 fi
 ```
+
+### History
+
+For older git history not available in the web interface, see
+<https://github.com/poikilos/linux-preinstall/commits/master/utilities/install_any.py>.
