@@ -213,6 +213,17 @@ Terminal=false
 Type=Application
 """
 
+def encode_py_val(v):
+    if v is True:
+        return "True"
+    if v is False:
+        return "False"
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return '"' + v.replace('"', "\\\"") + '"'
+    return str(v)
+
 def setDeepValue(category, luid, key, value):
     if localMachine.get(category) is None:
         localMachine[category] = {}
@@ -2030,7 +2041,7 @@ def install_program_in_place(src_path, **kwargs):
     print("* using programs path: '{}'".format(dst_programs))
     dirname = os.path.split(dirpath)[-1]
     # luid = None
-
+    applications = os.path.join(share_path, "applications")
     if (casedName is None) or (version is None):
         # try_names = [filename, dirname]
         debug("* detecting name and version from {}".format(src_path))
@@ -2081,13 +2092,41 @@ def install_program_in_place(src_path, **kwargs):
                 if luid is None:
                     luid = thisPkg.luid
     else:
-        print("* The casedName was set to \"{}\"".format(casedName))
-        print("* The version was set to \"{}\"".format(version))
-        print("* The luid was set to \"{}\"".format(luid))
-        print("* The icon filename suffix was set to \"{}\""
-              "".format(suffix))
-
-    applications = os.path.join(share_path, "applications")
+        print("* The known casedName is \"{}\"".format(casedName))
+        print("* The known version is \"{}\"".format(version))
+        print("* The known luid is \"{}\"".format(luid))
+        suffix_msg = "The icon filename suffix was explicitly"
+        if (suffix is None) or (len(suffix) < 1):
+            suffix = getProgramValue(luid, "suffix")
+            if suffix is None:
+                suffix = ""
+            else:
+                suffix_msg = "The known icon suffix was"
+        if (suffix is None) or (len(suffix) < 1):
+            print("* There is no icon filename suffix ({})."
+                  "".format(encode_py_val(suffix)))
+            matches = []
+            suffixes = []
+            if os.path.isdir(applications):
+                for sub in os.listdir(applications):
+                    subPath = os.path.join(applications, sub)
+                    if sub.startswith(luid+"-"):
+                        matches.append(sub)
+                        subName = os.path.splitext(sub)[0]
+                        parts = subName.split("-")
+                        suffixes.append("-"+parts[1])
+                        # ^ [2] may be version
+            if len(suffixes) > 0:
+                print("WARNING: There are possible matches to {luid} in"
+                      " {parent} so the suffix in {lm} for {luid} may"
+                      " need to be set to one of the following:"
+                      " {suffixes}".format(luid=luid,
+                                           parent=applications,
+                                           lm=localMachineMetaPath,
+                                           suffixes=suffixes))
+        else:
+            print("* {} {}"
+                  "".format(suffix_msg, encode_py_val(suffix)))
     sc_path = None
     sc_name = None
     old_sc_name = None
