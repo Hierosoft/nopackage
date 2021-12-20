@@ -1981,11 +1981,11 @@ def install_program_in_place(src_path, **kwargs):
         error("Error: You must specify a path to a binary file.")
         return False
     elif not os.path.isfile(src_path):
-        usage()
-        print("ERROR: '{}' is not a file.".format(src_path))
         src_name = os.path.split(src_path)[-1]
         try_dest_path = os.path.join(dst_programs, src_name)
         if not do_uninstall:
+            usage()
+            print("ERROR: '{}' is not a file.".format(src_path))
             if os.path.isfile(try_dest_path):
                 print("'{}' is already {}ed.".format(try_dest_path,
                                                      verb))
@@ -2033,6 +2033,7 @@ def install_program_in_place(src_path, **kwargs):
 
     if (casedName is None) or (version is None):
         # try_names = [filename, dirname]
+        debug("* detecting name and version from {}".format(src_path))
         try_sources = [src_path]
         if not src_path.lower().endswith(".appimage"):
             try_sources.append(dirpath)
@@ -2443,6 +2444,7 @@ def main():
     print("")
     caption = None
     src_path = None
+    global verbose
     if len(sys.argv) < 2:
         usage()
         print("")
@@ -2472,6 +2474,8 @@ def main():
             elif arg == "--help":
                 usage()
                 exit(0)
+            elif arg in ["--verbose", "--debug"]:
+                verbose = True
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
                 exit(1)
