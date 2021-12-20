@@ -1,3 +1,4 @@
+#!/bin/bash
 if [ "@$PREFIX" = "@" ]; then
     PREFIX="$HOME/.local"
 fi

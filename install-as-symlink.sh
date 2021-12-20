@@ -58,7 +58,7 @@ fi
 if [ -f "$dst_lib/__init__.py" ]; then
     existing_src="`readlink $dst_lib`"
     if [ -z "$existing_src" ]; then
-        echo "Error: There is a logic error in $0 $@. The existing src is not a symlink but that should already have been addressed (if --force) or returned an exit code."
+        echo "Error: There is a logic error in $0 $@. The existing src is not a symlink but that should already have been addressed (if --force). Otherwise, an exit code should have been returned by now."
         exit 1
     fi
     if [ "@$UNINSTALL" = "@true" ]; then
@@ -94,7 +94,7 @@ if [ "@$UNINSTALL" != "@true" ]; then
     else
         existing_src="`readlink $dst_lib`"
         if [ "$existing_src" != "$src_lib" ]; then
-            echo "Error: There is a logic error in the script. The existing \"$dst_lib\" is a symlink that points to the some other source (\"$existing_src\") instead of \"$src_lib\"but that should have been addressed above (if --force) or returned an exit code."
+            echo "Error: There is a logic error in the script. The existing \"$dst_lib\" is a symlink that points to the some other source (\"$existing_src\") instead of \"$src_lib\"but that should have been addressed above (if --force). Otherwise, an exit code should have been returned by now."
             exit 1
         fi
         echo "* using existing symlink \"dst_lib\" since it already points to \"$src_lib\""
@@ -185,7 +185,7 @@ else
     echo "FAILED (line $LINENO)"
     exit $code
 fi
-echo "Path=$HOME/.local/lib/nopackage" >> "$dst_sc"
+# echo "Path=$HOME/.local/lib/nopackage" >> "$dst_sc"
 echo "Path=$src_repo" >> "$dst_sc"
 # ^ for metadata
 echo "Exec=$HOME/.local/lib/nopackage/__init__.py" >> "$dst_sc"
