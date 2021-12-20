@@ -213,6 +213,7 @@ Terminal=false
 Type=Application
 """
 
+
 def encode_py_val(v):
     if v is True:
         return "True"
@@ -223,6 +224,7 @@ def encode_py_val(v):
     if isinstance(v, str):
         return '"' + v.replace('"', "\\\"") + '"'
     return str(v)
+
 
 def setDeepValue(category, luid, key, value):
     if localMachine.get(category) is None:
@@ -241,7 +243,8 @@ def setDeepValue(category, luid, key, value):
                          " or something like {} instead."
                          "".format(category, luid, key, newCallName))
     localMachine[category][luid][key] = value
-
+    if enableSaveOnWrite:
+        saveLocalMachine()
 
 
 def setProgramValue(luid, key, value):
@@ -336,6 +339,8 @@ def addDeepValue(category, luid, key, value, unique=True):
                          "".format(category, luid, key))
     if (not unique) or (value not in localMachine[category][luid][key]):
         localMachine[category][luid][key].append(value)
+    if enableSaveOnWrite:
+        saveLocalMachine()
 
 
 def addProgramValue(luid, key, value, unique=True):
@@ -344,6 +349,7 @@ def addProgramValue(luid, key, value, unique=True):
     See addDeepValue for further documentation.
     '''
     addDeepValue('programs', luid, key, value, unique=unique)
+
 
 def addPackageValue(sc_name, key, value, unique=True):
     '''
@@ -360,6 +366,7 @@ def addPackageValue(sc_name, key, value, unique=True):
     '''
     addDeepValue('packages', sc_name, key, value, unique=unique)
 
+
 '''
 def setVersionedValue(luid, version, key, value):
     # Use setPackageValue instead.
@@ -375,6 +382,9 @@ def setVersionedValue(luid, version, key, value):
     if localMachine['programs'][luid]['versions'].get(version) is None:
         localMachine['programs'][luid]['versions'][version] = {}
     localMachine['programs'][luid]['versions'][version][key] = value
+    if enableSaveOnWrite:
+        saveLocalMachine()
+
 
 def addVersionedValue(luid, version, key, value):
     # Use addPackageValue instead.
@@ -390,6 +400,8 @@ def addVersionedValue(luid, version, key, value):
         raise ValueError("You cannot append to non-list (programs.{}.versions.{}.{})."
                          "".format(luid, version, key))
     localMachine['programs'][luid]['versions'][version][key].append(value)
+    if enableSaveOnWrite:
+        saveLocalMachine()
 '''
 
 
@@ -664,7 +676,7 @@ def dl_progress(evt):
     global downloading
     dl_msg_w = 80
     if downloading:
-        sys.stderr.write("\r")
+        sys.stderr.write("\r")  # r (to the start of the SAME line).
     line = "{}".format(evt['loaded']).ljust(dl_msg_w)
     # ^ 2nd param of ljust (,`character`) is optional
     sys.stderr.write(line)
@@ -1402,7 +1414,7 @@ if not os.path.isfile(localMachineMetaPath):
         # error("names: {}".format(names))
         # ^ should match validNames
         error("")
-        error("[debug] localMachine: {}"
+        error("localMachine: {}"
               "".format(json.dumps(localMachine, indent=2)))
         with open(localMachineMetaPath, 'w') as outs:
             json.dump(localMachine, outs, indent=2)
@@ -1414,6 +1426,11 @@ else:
           "".format(localMachineMetaPath))
 fm = None
 
+def saveLocalMachine():
+    with open(localMachineMetaPath, 'w') as outs:
+        json.dump(localMachine, outs, indent=2)
+
+enableSaveOnWrite = True
 
 def logLn(line, path=logPath):
     print("[logged]:" + line)
@@ -1428,7 +1445,7 @@ def logLn(line, path=logPath):
 
 def install_program_in_place(src_path, **kwargs):
     """
-    Install binary program src_path
+    Install or uninstall the application.
 
     Sequential arguments:
     src_path -- This is usually a file or directory source path, but if
@@ -1535,7 +1552,7 @@ def install_program_in_place(src_path, **kwargs):
         if src_path is None:
             raise ValueError("There is an error in {}: The src_path is"
                              " not set for luid {}"
-                             "".format(localMachineMetaPath, ))
+                             "".format(localMachineMetaPath, luid))
         if is_dir is None:
             if knownMeta.get('is_dir') is not None:
                 is_dir = knownMeta.get('is_dir')
@@ -2229,9 +2246,31 @@ def install_program_in_place(src_path, **kwargs):
                     print("* \"{}\" already exists (skipping download)"
                           "".format(icon_path))
     print("    (The version will be added later if multiVersion)")
-    path = src_path
+    dst_path = src_path  # same if in_place
     # dst_programs = os.path.join(os.environ.get("HOME"), ".config")
     dst_dirpath = os.path.join(dst_programs, dirname)
+    debug("dst_dirpath: {}".format(encode_py_val(dst_dirpath)))
+    # ^ Uh oh, could be something bad such as:
+    #   /home/owner/.local/lib64/1.InstallManually
+    if move_what is None:
+        if do_uninstall:
+            if dst_path == src_path:
+                if pull_back:
+                    dst_path = os.path.join(dst_programs, filename)
+                    if os.path.isfile(dst_path):
+                        move_what = 'file'
+                    elif os.path.isdir(dst_path):
+                        move_what = 'directory'
+                    else:
+                        raise NotImplementedError(
+                            "pull back a calculated destination path"
+                        )
+                    if dst_path == src_path:
+                        raise RuntimeError("dst_path and src_path"
+                                           " are the same, preventing"
+                                           " pull_back.")
+
+    debug("move_what: {}".format(encode_py_val(move_what)))
     if move_what == 'file':
         if not os.path.isdir(dst_programs):
             if not do_uninstall:
@@ -2240,54 +2279,60 @@ def install_program_in_place(src_path, **kwargs):
                 print("'{}' does not exist, so there is nothing to {}."
                       "".format(dst_programs, verb))
                 return True
-        path = os.path.join(dst_programs, filename)
-        if src_path != path:
+        dst_path = os.path.join(dst_programs, filename)
+        if src_path != dst_path:
             if not do_uninstall:
-                print("mv \"{}\" \"{}\"".format(src_path, path))
-                if src_path != path:
-                    shutil.move(src_path, path)
+                print("mv \"{}\" \"{}\"".format(src_path, dst_path))
+                if src_path != dst_path:
+                    shutil.move(src_path, dst_path)
                     logLn("install_file:{}".format(dst_dirpath))
                     setProgramValue(luid, 'installed', True)
                 else:
-                    print("The file is already at '{}'.".format(path))
+                    print("The file is already at '{}'."
+                          "".format(dst_path))
                     logLn("#install_file:{}".format(dst_dirpath))
                     setProgramValue(luid, 'install_file', dst_dirpath)
             else:
-                if os.path.isfile(path):
+                if os.path.isfile(dst_path):
                     if not os.path.isfile(src_path) and pull_back:
-                        print("mv \"{}\" \"{}\"".format(path, src_path))
-                        shutil.move(path, src_path)
-                        logLn("uninstall_file:{}".format(path))
+                        print("mv \"{}\" \"{}\""
+                              "".format(dst_path, src_path))
+                        shutil.move(dst_path, src_path)
+                        logLn("uninstall_file:{}".format(dst_path))
                         logLn("recovered_to:{}".format(src_path))
                         setProgramValue(luid, 'installed', False)
                         setProgramValue(luid, 'src_path', src_path)
-                        if src_path == path:
+                        if src_path == dst_path:
                             print("The source path"
                                   " \"{}\" was moved to \"{}\"."
-                                  "".format(path, src_path))
+                                  "".format(dst_path, src_path))
                     else:
-                        print("rm \"{}\"".format(path))
-                        os.remove(path)
-                        path("uninstall_dir:{}\n".format(dst_dirpath))
-                        if src_path == path:
+                        if pull_back:
+                            print("* the file is already recovered at"
+                                  " {}".format(src_path))
+                        print("rm \"{}\"".format(dst_path))
+                        os.remove(dst_path)
+                        logLn("uninstall_dir:{}\n".format(dst_dirpath))
+                        if src_path == dst_path:
                             print("The source path"
-                                  " '{}' is removed.".format(path))
+                                  " '{}' is removed.".format(dst_path))
                 else:
                     print("'{}' does not exist, so there is nothing to"
-                          " {}.".format(path, verb))
+                          " {}.".format(dst_path, verb))
 
     elif move_what == 'directory':
         if do_uninstall:
             if os.path.isdir(dst_dirpath):
                 if not os.path.isfile(src_path) and pull_back:
-                    print("mv \"{}\" \"{}\"".format(path, src_path))
+                    print("mv \"{}\" \"{}\"".format(dst_path, src_path))
                     shutil.move(dst_dirpath, src_path)
                     logLn("recovered_to:{}".format(src_path))
                     setProgramValue(luid, 'src_path', src_path)
-                    if src_path == path:
+                    setProgramValue(luid, 'dst_path', dst_path)
+                    if src_path == dst_path:
                         print("The source path"
                               " \"{}\" was moved to \"{}\"."
-                              "".format(path, src_path))
+                              "".format(dst_path, src_path))
                 else:
                     shutil.rmtree(dst_dirpath)
             else:
@@ -2307,9 +2352,10 @@ def install_program_in_place(src_path, **kwargs):
                           " directory.".format(dst_dirpath))
                     return False
             shutil.move(dirpath, dst_dirpath)
-            path = os.path.join(dst_dirpath, filename)
+            dst_path = os.path.join(dst_dirpath, filename)
             logLn("install_move_dir:{}".format(dst_dirpath))
-
+    else:
+        debug("* move_what: {}".format(encode_py_val(move_what)))
     # Still set generic values for the program even if multiVersion,
     # so that the last install is recorded:
     setProgramValue(luid, 'src_path', src_path)
@@ -2331,10 +2377,12 @@ def install_program_in_place(src_path, **kwargs):
 
     if not do_uninstall:
         sys.stderr.write("* marking \"{}\" as executable..."
-                         "".format(path))
-        os.chmod(path, stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
+                         "".format(dst_path))
+        sys.stderr.flush()
+        os.chmod(dst_path, stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
                        | stat.S_IROTH | stat.S_IXOTH)
         sys.stderr.write("OK\n")
+        sys.stderr.flush()
         # stat.S_IRWXU : Read, write, and execute by owner
         # stat.S_IEXEC : Execute by owner
         # stat.S_IXGRP : Execute by group
@@ -2358,7 +2406,7 @@ def install_program_in_place(src_path, **kwargs):
     if multiVersion:
         setPackageValue(sc_name, 'caption', caption)
         setPackageValue(sc_name, 'sc_path', sc_path)
-    shortcut_data = shortcut_data_template.format(Exec=path,
+    shortcut_data = shortcut_data_template.format(Exec=dst_path,
                                                   Name=caption,
                                                   Icon=icon_path)
 
@@ -2456,8 +2504,8 @@ def install_program_in_place(src_path, **kwargs):
                 print("* installing '{}'...{}".format(sc_path,
                                                       inst_msg))
                 sys.stderr.write("* marking \"{}\" as executable..."
-                                 "".format(path))
-                os.chmod(path, stat.S_IRWXU | stat.S_IXGRP
+                                 "".format(dst_path))
+                os.chmod(dst_path, stat.S_IRWXU | stat.S_IXGRP
                          | stat.S_IRGRP
                          | stat.S_IROTH | stat.S_IXOTH)
                 sys.stderr.write("OK\n")
@@ -2466,8 +2514,8 @@ def install_program_in_place(src_path, **kwargs):
                 print("* installing '{}'...".format(sc_name,
                                                     inst_msg))
             print("  Name={}".format(caption))
-            print("  Exec={}".format(path))
-            logLn("install_shortcut:{}".format(path))
+            print("  Exec={}".format(dst_path))
+            logLn("install_shortcut:{}".format(dst_path))
             print("  Icon={}".format(icon_path))
             # print("")
             # print("You may need to reload the application menu, such"
@@ -2475,7 +2523,7 @@ def install_program_in_place(src_path, **kwargs):
             # print("  ")
             # or xdg-desktop-menu install mycompany-myapp.desktop
         else:
-            logLn("install_shortcut_failed:{}".format(path))
+            logLn("install_shortcut_failed:{}".format(dst_path))
         return ok
     return False
 
