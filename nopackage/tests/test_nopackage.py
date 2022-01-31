@@ -10,6 +10,12 @@ from nopackage import (
     tests,
     error as prerr,
 )
+myPath = os.path.realpath(__file__)
+testsDir = os.path.dirname(myPath)
+testDataPath = os.path.join(testsDir, "data")
+if not os.path.isdir(testDataPath):
+    raise IOError("The test folder is missing: \"{}\""
+                  "".format(testDataPath))
 
 def toPythonLiteral(v):
     '''
@@ -84,7 +90,7 @@ def assertAllEqual(list1, list2, tbs=None):
 PackageInfo.verbosity = 2
 
 class TestNopackage(TestCase):
-    def test_self(self):
+    def test_1_self(self):
         prerr()
         prerr()
         prerr()
@@ -111,7 +117,7 @@ class TestNopackage(TestCase):
                         prerr(tbs)
                     raise ex
 
-    def test_name_parsing(self):
+    def test_2_name_parsing(self):
 
         fn = "blender-2.79b-linux-glibc219-x86_64"
         chunks =['linux', 'X86_64']  # intentionally different case for CI test
@@ -310,6 +316,16 @@ class TestNopackage(TestCase):
             pkg = PackageInfo(fname, is_dir=True)
             prerr("{}:\n  {}".format(fname, pkg))
 
+    def test_bin_in_folder(self):
+        src_path = os.path.join(testDataPath, "blender-3.0.1-linux-x64")
+        file_path = os.path.join(src_path, "blender")
+        prerr("* testing non-versioned filename in versioned directory"
+              " \"{}\"".format(src_path))
+        pkg = PackageInfo(src_path)
+        self.assertEqual(pkg.casedName, "Blender")
+        self.assertEqual(pkg.caption, "Blender 3.0.1")
+        self.assertEqual(pkg.version, "3.0.1")
+        self.assertEqual(pkg.luid, "blender")
 
 
 # prerr("")
