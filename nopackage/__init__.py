@@ -174,6 +174,9 @@ if not os.path.isfile(distGoodFlag):
 else:
     pass
     # error("* Checking for {}...OK".format(distGoodFlag))
+bad_id_flag = ("you must use the id from"
+               " the list of known installed programs")
+
 version_chars = digits + "."
 
 # The following dictionaries contain information that can't be derived
@@ -216,6 +219,15 @@ Icon={Icon}
 Terminal=false
 Type=Application
 """
+
+
+def getProgramIDs():
+    results = []
+    programs = localMachine.get("programs")
+    if programs is None:
+        return None
+    results = list(programs.keys())
+    return results
 
 
 def encode_py_val(v):
@@ -719,6 +731,11 @@ def download(file_path, url, cb_progress=None, cb_done=None,
         cb_done(evt)
 
 
+noAlphaErrorFmt = ('Parsing names with no alphabetic characters'
+                   ' is not possible (self.fname:"{}"'
+                   ', fnamePartial:"{}"'
+                   ')')
+
 class PackageInfo:
     '''
     To get a globally unique name based on whether multiVersion or
@@ -751,6 +768,7 @@ class PackageInfo:
         "64",  # such as Godot 64-bit
     ]
     verbosity = 1
+    NO_VER_FLAG = "The end of the program name"
 
     def __init__(self, src_path, **kwargs):
         '''
@@ -785,7 +803,10 @@ class PackageInfo:
             src_path is not a file in a way that is more future-proof
             than is_dir=True. The reason for forcing init to
             finish is to obtain metadata for non-install purposes.
+        do_uninstall -- This doesn't uninstall the program or change the
+            construction of the object, but makes error(s) more clear.
         '''
+        raw_src_path = src_path
         print("[PackageInfo __init__] * checking src_path {}..."
               "".format(src_path))
         if PackageInfo.verbosity > 0:
@@ -800,18 +821,27 @@ class PackageInfo:
         self.version = kwargs.get('version')
         self.platform = None
         self.arch = None
+        do_uninstall = kwargs.get('do_uninstall')
         self.path = src_path
         self.suffix = ""
         self.dry_run = kwargs.get('dry_run')
         is_dir = kwargs.get('is_dir')
         if is_dir is None:
             if not os.path.exists(src_path) and not self.dry_run:
-                raise ValueError(
+                msg = (
                     "src_path \"{}\" must exist or you must specify the"
                     " is_dir keyword argument for PackageInfo"
                     " init (only if running a test)."
                     "".format(src_path)
                 )
+                if do_uninstall:
+                    msg = (" If you are uninstalling"
+                           " without the full file/folder name of the"
+                           " install source, " + bad_id_flag
+                           + ": {} (from {}).")
+                    msg = msg.format(getProgramIDs(),
+                                     localMachineMetaPath)
+                raise ValueError(msg)
             is_dir = os.path.isdir(src_path)
         removeExt = kwargs.get('removeExt')
         if removeExt is None:
@@ -826,8 +856,11 @@ class PackageInfo:
         while not fnamePartial[startChar].isalpha():
             startChar += 1
             if startChar >= len(fnamePartial):
-                msg = ("Parsing names with no alphabetic"
-                       " characters is not possible.")
+                msg =  noAlphaErrorFmt.format(self.fname, fnamePartial)
+                error(msg)
+                error("raw_src_path: {}".format(raw_src_path))
+                error("src_path: {}".format(src_path))
+                error("kwargs: {}".format(kwargs))
                 raise ValueError(msg)
                 # print(msg)
                 # break
@@ -897,8 +930,8 @@ class PackageInfo:
         if (len(parts) < 2) and (self.version is None):
             if not self.dry_run:
                 usage()
-                raise ValueError("The end of the program name (any of"
-                                 " '{}' or '.' is not in {} and you"
+                raise ValueError(PackageInfo.NO_VER_FLAG + " (any of"
+                                 " '{}' or '.' is not in \"{}\" and you"
                                  " didn't specify a version such as:\n"
                                  " {} {} --version x"
                                  "".format(PackageInfo.DELIMITERS,
@@ -2033,7 +2066,12 @@ def install_program_in_place(src_path, **kwargs):
 
     filename = os.path.split(src_path)[-1]
     if dirpath is None:
-        dirpath = os.path.split(src_path)[-2]
+        # dirpath = os.path.split(src_path)[-2]
+        # print("* There was no dirpath, so set to parent: \"{}\""
+        #       "".format(dirpath))
+        # ^ This would be really bad. It would become whatever folder
+        #   contains the file if it is a file!
+        pass
     else:
         print("* using detected \"{}\" for dirpath instead of \"{}\""
               "".format(dirpath, os.path.split(src_path)[-2]))
@@ -2076,24 +2114,47 @@ def install_program_in_place(src_path, **kwargs):
     # luid = None
     applications = os.path.join(share_path, "applications")
     if (casedName is None) or (version is None):
+        debug("* casedName:{} version:{} () so detecting..."
+              "".format(casedName, version))
         # try_names = [filename, dirname]
-        debug("* detecting name and version from {}".format(src_path))
-        try_sources = [src_path]
-        if not src_path.lower().endswith(".appimage"):
+        # debug("* detecting name and version from {}".format(src_path))
+        # if os.path.isdir(dirpath)
+        try_sources = []
+        # if not src_path.lower().endswith(".appimage"):
+        if dirpath is not None:
             try_sources.append(dirpath)
+        try_sources.append(src_path)
         pkg = None
         pkgs = []
-        for try_source in try_sources:
-            print("[install_program_in_place] * try_source {}"
-                  "".format(try_source))
+        debug("* detecting name and version from any of {}"
+              "".format(try_sources))
+        for try_src_i in range(len(try_sources)):
+            try_source = try_sources[try_src_i]
+            print("[install_program_in_place] * try_sources[{}] {}"
+                  "".format(try_src_i, try_source))
+            # try:
             thisPkg = PackageInfo(
                 try_source,
                 casedName=casedName,
                 version=version,
                 caption=caption,
                 is_dir=is_dir,
+                do_uninstall=do_uninstall,
             )
             pkgs.append(thisPkg)
+            if thisPkg.version != None:
+                break
+            '''
+            except ValueError as ex:
+                if PackageInfo.NO_VER_FLAG in str(ex):
+                    # If there is any other item in try_sources,
+                    # there may still be a package to add to pkgs,
+                    # so just keep going if the only problem is that
+                    # the format was incorrect.
+                    continue
+                else:
+                    raise ex
+            '''
         for thisPkg in pkgs:
             if pkg is None:
                 pkg = thisPkg
@@ -2329,6 +2390,7 @@ def install_program_in_place(src_path, **kwargs):
     debug("dst_dirpath: {}".format(encode_py_val(dst_dirpath)))
     debug("dirname: {}".format(encode_py_val(dirname)))
 
+    dst_bin_path = None
     if os.path.isfile(src_path) or os.path.isfile(dst_path):
         if move_what != 'directory':
             # Do NOT set it to programs, or it may be erased/overwritten
@@ -2336,6 +2398,7 @@ def install_program_in_place(src_path, **kwargs):
             # dirname = os.path.split(dst_dirpath)[1]
             # debug("* detected dst_dirpath "
             #       "".format(encode_py_val(move_what)))
+            dst_bin_path = dst_path
             pass
         else:
             print("WARNING: The path is a file but move_what is"
@@ -2343,6 +2406,7 @@ def install_program_in_place(src_path, **kwargs):
                   " correct.".format(encode_py_val(dst_dirpath)))
 
     debug("move_what: {}".format(encode_py_val(move_what)))
+
     if move_what == 'file':
         if not os.path.isdir(dst_programs):
             if not do_uninstall:
@@ -2423,8 +2487,14 @@ def install_program_in_place(src_path, **kwargs):
                           " --reinstall option to ERASE the"
                           " directory.".format(dst_dirpath))
                     return False
+            if os.path.isfile(src_path):
+                bin_name = os.path.split(src_path)[-1]
+                dst_bin_path = os.path.join(dst_path, bin_name)
+                debug("* set dst_bin_path to \"{}\" since src_path"
+                      " was a file."
+                      "".format(dst_bin_path))
+
             shutil.move(dirpath, dst_dirpath)
-            # dst_path = os.path.join(dst_dirpath, filename)
             logLn("install_move_dir:{}".format(dst_dirpath))
     else:
         debug("* move_what: {}".format(encode_py_val(move_what)))
@@ -2478,9 +2548,18 @@ def install_program_in_place(src_path, **kwargs):
     if multiVersion:
         setPackageValue(sc_name, 'caption', caption)
         setPackageValue(sc_name, 'sc_path', sc_path)
-    shortcut_data = shortcut_data_template.format(Exec=dst_path,
+    '''
+    dst_bin_path = dst_path
+    if src_path is not None:
+        if not os.path.isfile(dst_bin_path):
+            bin_name = os.path.split(src_path)[-1]
+            dst_bin_path = os.path.join(dst_path, bin_name)
+    '''
+    shortcut_data = shortcut_data_template.format(Exec=dst_bin_path,
                                                   Name=caption,
                                                   Icon=icon_path)
+    # ^ IF CHANGES, also update `print("  Exec=` etc. below
+    #   so that the log matches.
 
     my_dir = os.path.dirname(os.path.realpath(__file__))
     meta_dir = os.path.join(my_dir, "shortcut-metadata")
@@ -2586,7 +2665,7 @@ def install_program_in_place(src_path, **kwargs):
                 print("* installing '{}'...".format(sc_name,
                                                     inst_msg))
             print("  Name={}".format(caption))
-            print("  Exec={}".format(dst_path))
+            print("  Exec={}".format(dst_bin_path))
             logLn("install_shortcut:{}".format(dst_path))
             print("  Icon={}".format(icon_path))
             # print("")
@@ -2669,16 +2748,23 @@ def main():
     if parts[-1] == "AppImage":
         move_what='file'
     version = valueParams.get('version')
-    install_program_in_place(
-        src_path,
-        caption=caption,
-        move_what=move_what,
-        do_uninstall=do_uninstall,
-        enable_reinstall=enable_reinstall,
-        multiVersion=multiVersion,
-        version=version,
-    )
+    try:
+        install_program_in_place(
+            src_path,
+            caption=caption,
+            move_what=move_what,
+            do_uninstall=do_uninstall,
+            enable_reinstall=enable_reinstall,
+            multiVersion=multiVersion,
+            version=version,
+        )
+    except ValueError as ex:
+        if bad_id_flag in str(ex):
+            print("Error: " + str(ex))
+            return 1
+        else:
+            raise ex
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
