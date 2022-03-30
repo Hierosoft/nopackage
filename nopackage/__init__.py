@@ -191,17 +191,36 @@ iconLinks["pycharm.community"] = "https://github.com/JetBrains/intellij-communit
 iconLinks["keepassxc"] = "https://github.com/keepassxreboot/keepassxc/raw/develop/share/icons/application/scalable/apps/keepassxc.svg"
 iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
 iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
+iconLinks["ninja"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconNames = {}  # A list of icon names where the downloaded file should be renamed.
 iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
+iconNames["ninja"] = "ninja-ide"  # since the file is named "icon.png"
+minimumUniquePartOfLuid = {}
+minimumUniquePartOfLuid["unityhub"] = "unity"
+
 casedNames = {}  # A list of correct icon captions indexed by LUID
 casedNames["umlet"] = "UMLet Standalone"  # as opposed to a plugin/web ver
 casedNames["freecad"] = "FreeCAD"
 casedNames["android.studio.ide"] = "Android Studio IDE"
 casedNames["flashprint"] = "FlashPrint"
 casedNames["argouml"] = "ArgoUML"
+casedNames["ninja"] = "Ninja-IDE"
 annotations = {}
 annotations[".deb"] = "deb"
 annotations[".appimage"] = "AppImage"
+hyphenate_names = [
+    "ninja-ide",
+]
+
+
+known_binaries = ["RunAwesomeBump.sh"]
+# ^ Allows finding the name in edge cases
+#   (The version and name aren't separable in
+#   AwesomeBumpV5.Bin64Linux.tar.gz)
+# ^ TODO: Add multi-shortcut capability:
+#   - Using only RunAwesomeBump.sh skips a shortcut to the second mode
+#     run via RunAwesomeBumpGL330.sh
+
 
 noCmdMsg = "Error: You must specify a directory or binary file."
 OLD_NO_CMD_MSG = "You must specify a directory or binary file."
@@ -1562,6 +1581,7 @@ def install_program_in_place(src_path, **kwargs):
         detect_program_parent = False
     multiVersion = kwargs.get("multiVersion")
     icon_path = kwargs.get("icon_path")
+    print("* icon_path was set to: {}".format(icon_path))
     move_what = kwargs.get("move_what")
     pull_back = kwargs.get("pull_back")
 
@@ -1960,8 +1980,12 @@ def install_program_in_place(src_path, **kwargs):
         only_name = src_name.strip("-0123456789. ")
         try_name = src_name.split("-")[0]
         try_names = []
-        name_partial = src_name.split("-")[0]
+        if src_name not in hyphenate_names:
+            name_partial = src_name.split("-")[0]
+        else:
+            name_partial = src_name
         try_names.append(name_partial + ".sh")
+        try_names.append(name_partial + ".py")
         # ^ sh takes priority in case environment vars are necessary
         try_names.append(name_partial)
         if len(src_name.split("-")) > 1:
@@ -2028,7 +2052,11 @@ def install_program_in_place(src_path, **kwargs):
                     # if has something like argouml.sh and
                     # argouml2.sh (experimental), use argouml.sh.
                     del scripts[long_i]
-
+            if len(scripts) > 1:
+                for known_binary in known_binaries:
+                    if known_binary in scripts:
+                        scripts = [known_binary]
+                        break
             if len(jars) > 0:
                 enable_force_script = True
 
