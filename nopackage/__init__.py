@@ -191,13 +191,43 @@ iconLinks["pycharm.community"] = "https://github.com/JetBrains/intellij-communit
 iconLinks["keepassxc"] = "https://github.com/keepassxreboot/keepassxc/raw/develop/share/icons/application/scalable/apps/keepassxc.svg"
 iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
 iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
-iconLinks["ninja"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
+iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconNames = {}  # A list of icon names where the downloaded file should be renamed.
 iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
-iconNames["ninja"] = "ninja-ide"  # since the file is named "icon.png"
+iconNames["ninja-ide"] = "ninja-ide"  # since the file is named "icon.png"
 minimumUniquePartOfLuid = {}
 minimumUniquePartOfLuid["unityhub"] = "unity"
-
+hyphenate_names = [
+    "ninja-ide",
+]
+for rawLuid, url in iconLinks.items():
+    lastSlashI = url.rfind("/")
+    fileName = url[lastSlashI+1:]
+    luid = rawLuid
+    # gotLuid = hyphenate_names_lookup.get(luid)
+    # if gotLuid is not None:
+    #     luid = gotLuid
+    gotName = iconNames.get(luid)
+    if gotName is not None:
+        fileName = gotName
+    any_part_of_luid_in_name = False
+    luidParts = luid.split(".")
+    notDividedPart = minimumUniquePartOfLuid.get(luid)
+    if notDividedPart is not None:
+        luidParts.append(notDividedPart)
+    for luidPart in luidParts:
+        if luidPart in fileName.lower():
+            any_part_of_luid_in_name = True
+            break
+    if not any_part_of_luid_in_name:
+        print()
+        msg = (" None of {luidParts} are in {fileName} (end of {url})."
+               " Add an icon name containing {luid} (case insensitive,"
+               " no extension) as iconNames['{luid}']"
+               " to make the generated filename unique."
+               "".format(luid=luid, fileName=fileName, url=url,
+                         luidParts=luidParts))
+        raise AssertionError(msg)
 casedNames = {}  # A list of correct icon captions indexed by LUID
 casedNames["umlet"] = "UMLet Standalone"  # as opposed to a plugin/web ver
 casedNames["freecad"] = "FreeCAD"
@@ -208,9 +238,6 @@ casedNames["ninja"] = "Ninja-IDE"
 annotations = {}
 annotations[".deb"] = "deb"
 annotations[".appimage"] = "AppImage"
-hyphenate_names = [
-    "ninja-ide",
-]
 
 
 known_binaries = ["RunAwesomeBump.sh"]
@@ -659,6 +686,32 @@ def split_any(s, delimiters, blobs=None):
     return ret
 
 
+def find_startswith(haystacks, needle, cs=True):
+    '''
+    find the index of the string in the haystacks
+
+    Sequential arguments:
+    haystacks -- a list of strings
+    needle -- a string to find
+
+    Keyword arguments:
+    cs -- case-sensitive (True by default; Set to False for
+        case-insensitive)
+
+    Returns:
+    An index in haystacks, otherwise -1
+    '''
+    if not cs:
+        needle = needle.lower()
+    for i in range(len(haystacks)):
+        haystack = haystacks[i]
+        if not cs:
+            haystack = haystack.lower()
+        if haystack.startswith(needle):
+            return i
+    return -1
+
+
 def is_version(s, allowLettersAtEnd, allowMore=None):
     '''
     Sequential arguments:
@@ -987,7 +1040,22 @@ class PackageInfo:
 
         if self.casedName is None:
             self.casedName = parts[0]
-            if nameEnder > 0:
+            hyphenateI = find_startswith(hyphenate_names,
+                                         "-".join(parts), cs=False)
+            if hyphenateI >= 0:
+                lowerCaseParts = hyphenate_names[hyphenateI].split("-")
+                newPartsCount = len(lowerCaseParts)
+                self.casedName = "-".join(parts[:newPartsCount])
+                '''
+                ^ Reconstruct the uppercase name even though it will
+                  become lowercase later.
+                  - Why not add a lookup instead:
+                    Adding a lookup for luid based on a partial name
+                    such as "ninja" (extracted from "ninja-ide" by now)
+                    would result in a false positive for a program
+                    actually called "ninja".
+                '''
+            elif nameEnder > 0:
                 self.casedName = " ".join(parts[:nameEnder])
             else:
                 print("WARNING: there is no name ender such as arch,"
@@ -999,7 +1067,8 @@ class PackageInfo:
                       " before adding version".format(self.casedName))
         else:
             if PackageInfo.verbosity > 0:
-                print("* using specified name: {}".format(self.casedName))
+                print("* using specified name: {}"
+                      "".format(self.casedName))
 
         annotation = get_annotation(src_path)
         if annotation is not None:
@@ -1007,6 +1076,8 @@ class PackageInfo:
 
         if self.luid is None:
             self.luid = toLUID(self.casedName)
+            print("* luid (generated from casedName): {}"
+                  "".format(self.luid))
 
         if kwargs.get('casedName') is None:
             # only use a build-in cased name if not specified manually
@@ -2101,7 +2172,7 @@ def install_program_in_place(src_path, **kwargs):
         #   contains the file if it is a file!
         pass
     else:
-        print("* using detected \"{}\" for dirpath instead of \"{}\""
+        print("* using detected \"{}\" for dirpath (source was \"{}\")"
               "".format(dirpath, os.path.split(src_path)[-2]))
         filename = src_path[len(dirpath)+1:]  # 1 for slash
         # INFO: The filename is a relative path (not merely a name) in
@@ -2358,6 +2429,8 @@ def install_program_in_place(src_path, **kwargs):
     dst_dirpath = None
     if try_dst_path is not None:
         dst_path = try_dst_path
+        print("* try_dst_path is set: '{}' so move_what will be file."
+              "".format(try_dst_path))
         move_what = 'file'
     if try_dst_dirpath is not None:
         dst_dirpath = try_dst_dirpath
@@ -2368,6 +2441,9 @@ def install_program_in_place(src_path, **kwargs):
             if dst_path == src_path:
                 if pull_back:
                     if os.path.isfile(dst_path) or os.path.isfile(src_path):
+                        print("* dst_path '{}' or src_path '{}'"
+                              " is a file so move_what will be file."
+                              "".format(dst_path, src_path))
                         move_what = 'file'
                     elif os.path.isdir(dst_path) or os.path.isdir(src_path):
                         move_what = 'directory'
@@ -2766,6 +2842,8 @@ def main():
         if os.path.isdir(src_path):
             move_what = 'directory'
         elif os.path.isfile(src_path):
+            print("* [main] src_path is a file so move_what"
+                  " will be file.")
             move_what = 'file'
         else:
             print("{} is not a file nor a directory.".format(src_path))
