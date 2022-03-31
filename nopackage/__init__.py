@@ -200,6 +200,10 @@ minimumUniquePartOfLuid["unityhub"] = "unity"
 hyphenate_names = [
     "ninja-ide",
 ]
+shortcutMetas = {}
+shortcutMetas['ninja-ide'] = {}
+shortcutMetas['ninja-ide']['Categories'] = "Qt;Development;IDE;TextEditor;"
+shortcutMetas['ninja-ide']['Keywords'] = "Text;Editor;"
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
@@ -234,7 +238,7 @@ casedNames["freecad"] = "FreeCAD"
 casedNames["android.studio.ide"] = "Android Studio IDE"
 casedNames["flashprint"] = "FlashPrint"
 casedNames["argouml"] = "ArgoUML"
-casedNames["ninja"] = "Ninja-IDE"
+casedNames["ninja-ide"] = "Ninja-IDE"
 annotations = {}
 annotations[".deb"] = "deb"
 annotations[".appimage"] = "AppImage"
@@ -885,7 +889,7 @@ class PackageInfo:
             print("")
             print("Creating PackageInfo...")
         self.metas = ['casedName', 'luid', 'version',
-                      'caption', 'platform', 'arch']
+                      'caption', 'platform', 'arch', 'is_dir']
         no_error = kwargs.get('no_error') is True
         self.casedName = kwargs.get('casedName')
         self.luid = kwargs.get("luid")
@@ -913,8 +917,40 @@ class PackageInfo:
                            + ": {} (from {}).")
                     msg = msg.format(getProgramIDs(),
                                      localMachineMetaPath)
-                raise ValueError(msg)
+                # raise ValueError(msg + " {}".format(self.toDict()))
+                # ^ every meta is None at this point.
+                caller_line = None
+                relative_frame = 1
+                total_stack = inspect.stack()
+                # total_depth = len(total_stack)
+                frameinfo = total_stack[relative_frame][0]
+                # relative_depth = total_depth - relative_frame
+                # func_name = frameinfo.f_code.co_name
+                caller_line         = frameinfo.f_lineno
+                caller_file = os.path.basename(frameinfo.f_code.co_filename)
+                raise ValueError(msg + " \n{}:{}: should set is_dir."
+                                 "".format(caller_file, caller_line))
             is_dir = os.path.isdir(src_path)
+        self.is_dir = is_dir
+        if not do_uninstall:
+            if self.is_dir is not None:
+                was_dir = getProgramValue(luid, 'is_dir')
+                if was_dir is True:
+                    '''
+                    It is possible that a previous PackageInfo was
+                    constructed for the directory and another was
+                    constructed to make the shortcut (and therefore
+                    is_dir has to be True in this one to deal with
+                    the shortcut, but localMachine should continue to
+                    store is_dir as True so a directory is known to
+                    be the source.
+                    '''
+                    print("* was_dir: {}".format(self.is_dir))
+                    print("  * is_dir (shortcut): {}"
+                          "".format(self.is_dir))
+                else:
+                    print("* is_dir: {}".format(self.is_dir))
+                    setProgramValue(luid, 'is_dir', self.is_dir)
         removeExt = kwargs.get('removeExt')
         if removeExt is None:
             removeExt = not is_dir
@@ -1051,9 +1087,9 @@ class PackageInfo:
                   become lowercase later.
                   - Why not add a lookup instead:
                     Adding a lookup for luid based on a partial name
-                    such as "ninja" (extracted from "ninja-ide" by now)
-                    would result in a false positive for a program
-                    actually called "ninja".
+                    such as "ninja" (extracted from "ninja-ide" at this
+                    point) would result in a false positive for a
+                    program actually called "ninja".
                 '''
             elif nameEnder > 0:
                 self.casedName = " ".join(parts[:nameEnder])
@@ -1106,6 +1142,7 @@ class PackageInfo:
             print("* using \"{}\" as icon filename prefix (luid)"
                   " (The version will be added later if multiVersion)"
                   "".format(self.luid))
+
         if self.caption is None:
             if versionI > -1:
                 self.caption = self.casedName + " " + parts[versionI]
@@ -1277,7 +1314,11 @@ class PackageInfo:
     def toDict(self):
         ret = {}
         for k in self.metas:
-            ret[k] = self.__dict__[k]
+            try:
+                ret[k] = getattr(self, k)
+                # except KeyError:  # only if using self.__dict__
+            except AttributeError:
+                ret[k] = None
         return ret
 
     def get_coexisting_id(self, multiPackage, multiVersion):
@@ -1698,6 +1739,9 @@ def install_program_in_place(src_path, **kwargs):
         if caption is None:
             if knownMeta.get('caption') is not None:
                 caption = knownMeta.get('caption')
+    else:
+        print("* generating new metadata for potential luid '{}'"
+              "".format(tryLuid))
 
     if src_path.lower().endswith(".appimage"):
         is_dir = False
@@ -2225,7 +2269,7 @@ def install_program_in_place(src_path, **kwargs):
         try_sources.append(src_path)
         pkg = None
         pkgs = []
-        debug("* detecting name and version from any of {}"
+        error("* detecting name and version from any of {}"
               "".format(try_sources))
         for try_src_i in range(len(try_sources)):
             try_source = try_sources[try_src_i]
@@ -2429,11 +2473,14 @@ def install_program_in_place(src_path, **kwargs):
     dst_dirpath = None
     if try_dst_path is not None:
         dst_path = try_dst_path
-        print("* try_dst_path is set: '{}' so move_what will be file."
+        print("* try_dst_path is set: '{}' so move_what will be 'file'."
               "".format(try_dst_path))
         move_what = 'file'
     if try_dst_dirpath is not None:
         dst_dirpath = try_dst_dirpath
+        print("* try_dst_dirpath is set: '{}'"
+              " so move_what will be 'directory'."
+              "".format(try_dst_dirpath))
         move_what = 'directory'
     # dst_programs = os.path.join(os.environ.get("HOME"), ".config")
     if move_what is None:
@@ -2664,6 +2711,10 @@ def install_program_in_place(src_path, **kwargs):
                                                   Icon=icon_path)
     # ^ IF CHANGES, also update `print("  Exec=` etc. below
     #   so that the log matches.
+    for knownLuid, knownFields in shortcutMetas.items():
+        if knownLuid == luid:
+            for knownName, knownValue in knownFields.items():
+                shortcut_data += "{}={}\n".format(knownName, knownValue)
 
     my_dir = os.path.dirname(os.path.realpath(__file__))
     meta_dir = os.path.join(my_dir, "shortcut-metadata")
