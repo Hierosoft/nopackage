@@ -1709,6 +1709,7 @@ def install_program_in_place(src_path, **kwargs):
     verb = "uninstall" if do_uninstall else "install"
     pull_back = None
     knownMeta = None
+    tryLuid = None
     # if luid is None:
     if not os.path.isfile(src_path):
         tryLuid = os.path.basename(src_path)
