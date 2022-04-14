@@ -192,6 +192,7 @@ iconLinks["keepassxc"] = "https://github.com/keepassxreboot/keepassxc/raw/develo
 iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
 iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
 iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
+iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
 iconNames = {}  # A list of icon names where the downloaded file should be renamed.
 iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
 iconNames["ninja-ide"] = "ninja-ide"  # since the file is named "icon.png"
@@ -201,9 +202,12 @@ hyphenate_names = [
     "ninja-ide",
 ]
 shortcutMetas = {}
+# ^ Store desktop file values except Icon (see iconLinks above).
 shortcutMetas['ninja-ide'] = {}
 shortcutMetas['ninja-ide']['Categories'] = "Qt;Development;IDE;TextEditor;"
 shortcutMetas['ninja-ide']['Keywords'] = "Text;Editor;"
+shortcutMetas['olive'] = {}
+shortcutMetas['olive']['Categories'] = "AudioVideo;Video;AudioVideoEditing;"
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
@@ -2202,9 +2206,12 @@ def install_program_in_place(src_path, **kwargs):
         if not do_uninstall:
             usage()
             print("ERROR: '{}' is not a file.".format(src_path))
+            try_dest_name = os.path.split(try_dest_path)[1]
             if os.path.isfile(try_dest_path):
                 print("'{}' is already {}ed.".format(try_dest_path,
                                                      verb))
+            elif try_dest_name in ['remove', 'uninstall']:
+                print("Maybe you meant: --uninstall")
             return False
     print("{} started.".format(verb.title()))
 
