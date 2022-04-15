@@ -15,11 +15,17 @@ Install an archive (deb, zip, gz, bz2), binary (including appimage) or directory
 - If there is a subdirectory in the archive, that will be detected and handled properly!
 - If it is a binary (including appimage), that will be detected and handled properly!
 - If there is no icon, and the icon is in `iconLinks`, that will be downloaded and used!
+  - Icons in nopackage/shortcut-metadata/<luid>.png will take precedence and prevent downloads
+    (where nopackage is the nopackage subdirectory of the repo, or is installed in the system as a python package).
 
 This software was formerly a script in <https://github.com/poikilos/linux-preinstall/utilities>.
 
 
 ## Author and license
+Specific files:
+- mirage.png: 2019-2021 mirukana, 2022 Jake "Poikilos" Gustafson ([GPL 3](https://github.com/mirukana/mirage/blob/master/COPYING) or [LGPL 3](https://github.com/mirukana/mirage/blob/master/COPYING.LESSER))
+
+Everything where not specified is:
 - Author: Jake "Poikilos" Gustafson
 - License: See [license.txt](license.txt).
 

@@ -158,6 +158,8 @@ def debug(msg):
         return
     error("[debug] {}".format(msg))
 
+my_dir = os.path.dirname(os.path.realpath(__file__))
+meta_dir = os.path.join(my_dir, "shortcut-metadata")
 
 digits = "0123456789"
 # me = os.path.split(sys.argv[0])[-1]
@@ -193,6 +195,7 @@ iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
 iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
 iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
+# iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
 iconNames = {}  # A list of icon names where the downloaded file should be renamed.
 iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
 iconNames["ninja-ide"] = "ninja-ide"  # since the file is named "icon.png"
@@ -208,6 +211,8 @@ shortcutMetas['ninja-ide']['Categories'] = "Qt;Development;IDE;TextEditor;"
 shortcutMetas['ninja-ide']['Keywords'] = "Text;Editor;"
 shortcutMetas['olive'] = {}
 shortcutMetas['olive']['Categories'] = "AudioVideo;Video;AudioVideoEditing;"
+shortcutMetas['mirage'] = {}
+shortcutMetas['mirage']['Categories'] = "Network;InstantMessaging;"
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
@@ -2448,8 +2453,19 @@ def install_program_in_place(src_path, **kwargs):
         print("* using '" + caption + "' as caption (from luid)")
     logLn("luid=\"{}\"".format(luid))
     setProgramValue(luid, 'luid', luid)
+
+    if not os.path.isdir(meta_dir):
+        raise RuntimeError("The shortcut-metadata directory wasn't"
+                           " found: \"{}\"".format(meta_dir))
+    try_included_icon = os.path.join(meta_dir, "{}.png".format(luid))
     if icon_path is None:
-        if try_icon_url is not None:
+        if os.path.isfile(try_included_icon):
+            icon_name = os.path.split(try_included_icon)[1]
+            icon_path = os.path.join(icons_path, icon_name)
+            print('* copying "{}" to "{}"'
+                  ''.format(try_included_icon, icon_path))
+            shutil.copy(try_included_icon, icon_path)
+        elif try_icon_url is not None:
             icon_name = try_icon_url.split('/')[-1]
             icon_partial_name = iconNames.get(luid)
             if icon_partial_name is not None:
@@ -2722,13 +2738,10 @@ def install_program_in_place(src_path, **kwargs):
     for knownLuid, knownFields in shortcutMetas.items():
         if knownLuid == luid:
             for knownName, knownValue in knownFields.items():
-                shortcut_data += "{}={}\n".format(knownName, knownValue)
+                scLine = "{}={}".format(knownName, knownValue)
+                shortcut_data += "{}\n".format(scLine)
+                print("* using known {} {}".format(luid, scLine))
 
-    my_dir = os.path.dirname(os.path.realpath(__file__))
-    meta_dir = os.path.join(my_dir, "shortcut-metadata")
-    if not os.path.isdir(meta_dir):
-        raise RuntimeError("The shortcut-metadata directory wasn't"
-                           " found: \"{}\"".format(meta_dir))
     meta_path = os.path.join(meta_dir, "{}.txt".format(luid))
 
     shortcut_append_lines = None
