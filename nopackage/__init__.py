@@ -63,6 +63,7 @@ import json
 from datetime import datetime
 import inspect
 
+# region same as hierosoft (Hierosoft Desktop)
 python_mr = 3  # major revision
 try:
     import urllib.request
@@ -159,6 +160,29 @@ def debug(msg):
     error("[debug] {}".format(msg))
 
 my_dir = os.path.dirname(os.path.realpath(__file__))
+
+
+profile = os.environ.get("HOME")
+if profile is None:
+    profile = os.environ.get("USERPROFILE")
+    AppDatas = os.path.join(profile, "AppData", "Local")
+    if not os.path.isdir(AppDatas):
+        raise RuntimeError("USERPROFILE {} is used (since HOME is"
+                           "not defined), but there is no {}"
+                           "".format(profile, AppDatas))
+    myAppData = os.path.join(AppDatas, "nopackage")
+else:
+    AppDatas = os.path.join(profile, ".config")
+    myAppData = os.path.join(AppDatas, "nopackage")
+    local_path = os.path.join(profile, ".local")
+    share_path = os.path.join(local_path, "share")
+    icons_path = os.path.join(share_path, "pixmaps")
+if not os.path.isdir(myAppData):
+    os.makedirs(myAppData)
+lib64 = os.path.join(local_path, "lib64")
+lib = os.path.join(local_path, "lib")
+# endregion same as hierosoft (Hierosoft Desktop)
+
 meta_dir = os.path.join(my_dir, "shortcut-metadata")
 
 digits = "0123456789"
@@ -167,7 +191,7 @@ digits = "0123456789"
 me = "nopackage"
 myDir = os.path.dirname(os.path.abspath(__file__))
 repoDir = os.path.dirname(myDir)
-distPath = os.path.join(myDir, "dist")
+distPath = os.path.join(myDir, "usr")
 distGoodFlag = os.path.join(distPath, "share", "applications", "nopackage.desktop")
 if not os.path.isfile(distGoodFlag):
     raise RuntimeError("The file {} is missing. Make sure nopackage is"
@@ -1359,25 +1383,6 @@ def dir_is_empty(folder_path):
     return count < 1
 
 
-profile = os.environ.get("HOME")
-if profile is None:
-    profile = os.environ.get("USERPROFILE")
-    AppDatas = os.path.join(profile, "AppData", "Local")
-    if not os.path.isdir(AppDatas):
-        raise RuntimeError("USERPROFILE {} is used (since HOME is"
-                           "not defined), but there is no {}"
-                           "".format(profile, AppDatas))
-    myAppData = os.path.join(AppDatas, "nopackage")
-else:
-    AppDatas = os.path.join(profile, ".config")
-    myAppData = os.path.join(AppDatas, "nopackage")
-    local_path = os.path.join(profile, ".local")
-    share_path = os.path.join(local_path, "share")
-    icons_path = os.path.join(share_path, "pixmaps")
-if not os.path.isdir(myAppData):
-    os.makedirs(myAppData)
-lib64 = os.path.join(local_path, "lib64")
-lib = os.path.join(local_path, "lib")
 
 oldLMP = os.path.join(AppDatas, "install_any", "local_machine.json")
 localMachineMetaPath = os.path.join(myAppData, "local_machine.json")
