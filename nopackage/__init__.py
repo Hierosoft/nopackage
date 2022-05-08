@@ -1442,7 +1442,7 @@ def getValueFromSymbol(valueStr, lineN=-1, path="(generated)"):
     if valueStr.startswith('"') and valueStr.endswith('"'):
         return valueStr[1:-1].replace("\\\"", "\"")
     try:
-        return datetime.strptime(tsRaw, giteaSanitizedDtFmt)
+        return datetime.strptime(valueStr, giteaSanitizedDtFmt)
     except ValueError as ex:
         if "does not match format" not in str(ex):
             error("WARNING: {} doens't seem to be a date but the error"
@@ -1454,7 +1454,7 @@ def getSymbolFromValue(value):
     if isinstance(value, str):
         return '"{}"'.format(value.replace("\"", "\\\""))
     if isinstance(value, datetime):
-        return '"' + datetime.strftime(tsRaw, giteaSanitizedDtFmt) + '"'
+        return '"' + datetime.strftime(value, giteaSanitizedDtFmt) + '"'
     return str(value)
 
 
