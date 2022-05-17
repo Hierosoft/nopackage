@@ -63,7 +63,7 @@ import json
 from datetime import datetime
 import inspect
 
-# region same as hierosoft (Hierosoft Desktop)
+# region same as hierosoft (Hierosoft Update)
 python_mr = 3  # major revision
 try:
     import urllib.request
@@ -181,7 +181,7 @@ if not os.path.isdir(myAppData):
     os.makedirs(myAppData)
 lib64 = os.path.join(local_path, "lib64")
 lib = os.path.join(local_path, "lib")
-# endregion same as hierosoft (Hierosoft Desktop)
+# endregion same as hierosoft (Hierosoft Update)
 
 meta_dir = os.path.join(my_dir, "shortcut-metadata")
 
@@ -813,7 +813,11 @@ def dl_progress(evt):
 def dl_done(evt):
     global downloading
     downloading = False
-    print("  DONE")
+    err = evt.get('error')
+    if err is None:
+        print("  DONE")
+    else:
+        print(err)
 
 
 def download(file_path, url, cb_progress=None, cb_done=None,
