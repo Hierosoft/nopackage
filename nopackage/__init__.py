@@ -63,7 +63,7 @@ import json
 from datetime import datetime
 import inspect
 
-# region same as hierosoft (Hierosoft Update)
+# region same as hierosoft (Hierosoft Update) and blnk
 python_mr = 3  # major revision
 try:
     import urllib.request
@@ -189,7 +189,7 @@ if not os.path.isdir(myAppData):
     os.makedirs(myAppData)
 lib64 = os.path.join(local_path, "lib64")
 lib = os.path.join(local_path, "lib")
-# endregion same as hierosoft (Hierosoft Update)
+# endregion same as hierosoft (Hierosoft Update) and blnk
 
 meta_dir = os.path.join(my_dir, "shortcut-metadata")
 
@@ -310,6 +310,82 @@ Icon={Icon}
 Terminal=false
 Type=Application
 """
+
+def format_shortcut(shortcut_data, meta, path=None, add_all=True):
+    '''
+    Change or add data to the XDG desktop format data.
+
+    Sequential arguments:
+    shortcut_data -- Provide the raw data from an XDG desktop file
+        or generate such data. If None, you must set path. Only data
+        that is in a section such as [Desktop Entry] will be touched.
+
+    Keyword arguments:
+    path -- If not None, the data is loaded from here instead of the
+        shortcut_data being used.
+    add_all -- Add keys and values from meta even if the keys are not in
+        the shortcut data.
+    '''
+    result = ""
+    marks = {}
+    for k, v in meta.items():
+        marks[k] = False
+    if shortcut_data is None:
+        if path is None:
+            raise ValueError(
+                "You must set shortcut_data or path."
+            )
+    if path is not None:
+        if shortcut_data is not None:
+            raise ValueError(
+                'shortcut_data should be None'
+                ' if path is specified, but both were specified:'
+                ' (packageShortcutData={}, path={})'
+                ''.format(shortcut_data, path)
+            )
+        with open(path, 'r') as ins:
+            shortcut_data = ""
+            for rawL in ins:
+                line = rawL.strip()
+                shortcut_data += line + "\n"
+    if "\r\n" in shortcut_data:
+        error("* Warning: converting \\r\\n newlines")
+    lines = shortcut_data.split("\n")
+    lineN = 0
+    section = None
+    for line in lines:
+        lineN += 1
+        line = line.strip()
+        if (len(line) == 0) or line.startswith("#"):
+            result += line + "\n"
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+            result += line + "\n"
+        elif section is not None:
+            signI = line.find("=")
+            if signI < 1:
+                error("{}:{}: unknown format (no assignment): {}"
+                      "".format(path, lineN, line))
+                result += line + "\n"
+                continue
+            name = line[:signI].strip()
+            value = line[signI+1:].strip()
+            newValue = meta.get(name)
+            if newValue is not None:
+                value = newValue
+                marks[name] = True
+            result += "{}={}\n".format(name, value)
+        else:
+            error("{}:{}: unknown format (no section): {}"
+                  "".format(path, lineN, line))
+            result += line + "\n"
+    if add_all:
+        for name, value in meta.items():
+            if not marks[name]:
+                result += "{}={}\n".format(name, value)
+                marks[name] = True
+    return result
 
 
 def getProgramIDs():
@@ -956,12 +1032,19 @@ class PackageInfo:
                     "".format(src_path)
                 )
                 if do_uninstall:
-                    msg = (" If you are uninstalling"
+                    msg_fmt = (
+                        "src_path \"{}\" doesn't exist so"
+                            " whether it is a directory can't be determined and wasn't in {}. If you are uninstalling"
                            " without the full file/folder name of the"
                            " install source, " + bad_id_flag
-                           + ": {} (from {}).")
-                    msg = msg.format(getProgramIDs(),
-                                     localMachineMetaPath)
+                           + ": {} (from {})."
+                    )
+                    msg = msg_fmt.format(
+                        src_path,
+                        localMachineMetaPath,
+                        getProgramIDs(),
+                        localMachineMetaPath,
+                    )
                 # raise ValueError(msg + " {}".format(self.toDict()))
                 # ^ every meta is None at this point.
                 caller_line = None
@@ -1667,7 +1750,8 @@ def install_program_in_place(src_path, **kwargs):
 
     move_what -- Only set this to 'file' if src_path is an AppImage or
     other self-contained binary file. Otherwise you may set it to
-    'directory'. The file or directory will be moved to ~/.local/lib64/
+    'directory' (or None to move nothing). The file or directory will be
+    moved to ~/.local/lib64/
     (or whatever programs directory is detected as a parent of the
     directory if detect_program_parent is True [automaticaly True by
     calling itself in the case of deb]).
@@ -2514,15 +2598,31 @@ def install_program_in_place(src_path, **kwargs):
     dst_dirpath = None
     if try_dst_path is not None:
         dst_path = try_dst_path
-        print("* try_dst_path is set: '{}' so move_what will be 'file'."
-              "".format(try_dst_path))
-        move_what = 'file'
+        if dst_path != src_path:
+            move_what = 'file'
+            print("* dst_path '{}' != src_path '{}' and is set in {}"
+                  " so move_what will be '{}'."
+                  "".format(dst_path, src_path, localMachineMetaPath,
+                            move_what))
+        else:
+            print("* try_dst_path '{}' == src_path '{}' and is set in"
+                  " {} so move_what will remain as '{}'."
+                  "".format(try_dst_path, src_path,
+                            localMachineMetaPath, move_what))
     if try_dst_dirpath is not None:
         dst_dirpath = try_dst_dirpath
-        print("* try_dst_dirpath is set: '{}'"
-              " so move_what will be 'directory'."
-              "".format(try_dst_dirpath))
-        move_what = 'directory'
+        if dst_dirpath != src_path:
+            move_what = 'directory'
+            print("* dst_dirpath '{}' != src_path '{}' and is set in {}"
+                  " so move_what will be '{}'."
+                  "".format(dst_dirpath, src_path,
+                            localMachineMetaPath, move_what))
+        else:
+            print("* try_dst_path '{}' == src_path '{}' and is set in"
+                  " {} so move_what will remain as '{}'."
+                  "".format(try_dst_path, src_path,
+                            localMachineMetaPath, move_what))
+
     # dst_programs = os.path.join(os.environ.get("HOME"), ".config")
     if move_what is None:
         if do_uninstall:
@@ -2542,6 +2642,9 @@ def install_program_in_place(src_path, **kwargs):
                             "".format(encode_py_val(src_path),
                                       encode_py_val(dst_path))
                         )
+    else:
+        error("* using setting for move_what: {}"
+              "".format(move_what))
     if dirname is not None:
         dst_dirpath = os.path.join(dst_programs, dirname)
         setProgramValue(luid, 'dst_dirpath', dst_dirpath)
@@ -2598,8 +2701,12 @@ def install_program_in_place(src_path, **kwargs):
                   " correct.".format(encode_py_val(dst_dirpath)))
 
     debug("move_what: {}".format(encode_py_val(move_what)))
+    if not do_uninstall:
+        if not multiVersion:
+            setProgramValue(luid, 'move_what', move_what)
 
     if move_what == 'file':
+        setProgramValue(luid, 'is_dir', False)
         if not os.path.isdir(dst_programs):
             if not do_uninstall:
                 os.makedirs(dst_programs)
@@ -2649,6 +2756,7 @@ def install_program_in_place(src_path, **kwargs):
                           " {}.".format(dst_path, verb))
 
     elif move_what == 'directory':
+        setProgramValue(luid, 'is_dir', True)
         if do_uninstall:
             if os.path.isdir(dst_dirpath):
                 if not os.path.isfile(src_path) and pull_back:
@@ -2668,6 +2776,7 @@ def install_program_in_place(src_path, **kwargs):
             logLn("uninstall_dir:{}".format(dst_dirpath))
             setProgramValue(luid, 'installed', False)
             if multiVersion:
+                setPackageValue(sc_name, 'luid', luid)
                 setPackageValue(sc_name, 'installed', False)
         else:
             print("mv '{}' '{}'".format(dirpath, dst_dirpath))
@@ -2689,6 +2798,13 @@ def install_program_in_place(src_path, **kwargs):
             shutil.move(dirpath, dst_dirpath)
             logLn("install_move_dir:{}".format(dst_dirpath))
     else:
+        if os.path.isdir(src_path):
+            setProgramValue(luid, 'is_dir', True)
+        elif os.path.isfile(src_path):
+            setProgramValue(luid, 'is_dir', False)
+        else:
+            error("* is_dir wasn't set since \"{}\" doesn't exist."
+                  "".format(src_path))
         debug("* move_what: {}".format(encode_py_val(move_what)))
     # Still set generic values for the program even if multiVersion,
     # so that the last install is recorded:
@@ -2705,6 +2821,7 @@ def install_program_in_place(src_path, **kwargs):
                   " derived metadata won't be recorded.")
         '''
         # ^ thisPkg referenced before assignment
+        setPackageValue(sc_name, 'luid', luid)
         setPackageValue(sc_name, 'dst_dirpath', dst_dirpath)
     else:
         setProgramValue(luid, 'dst_dirpath', dst_dirpath)
@@ -2738,8 +2855,12 @@ def install_program_in_place(src_path, **kwargs):
     setProgramValue(luid, 'caption', caption)
     setProgramValue(luid, 'sc_path', sc_path)
     if multiVersion:
+        setPackageValue(sc_name, 'luid', luid)
         setPackageValue(sc_name, 'caption', caption)
         setPackageValue(sc_name, 'sc_path', sc_path)
+    else:
+        if version is not None:
+            setProgramValue(luid, 'version', version)
     '''
     dst_bin_path = dst_path
     if src_path is not None:
@@ -2747,9 +2868,57 @@ def install_program_in_place(src_path, **kwargs):
             bin_name = os.path.split(src_path)[-1]
             dst_bin_path = os.path.join(dst_path, bin_name)
     '''
-    shortcut_data = shortcut_data_template.format(Exec=dst_bin_path,
-                                                  Name=caption,
-                                                  Icon=icon_path)
+    tryBinDir = os.path.dirname(dst_bin_path)
+    packageIcon = None
+    packageShortcut = None
+    if os.path.split(tryBinDir)[1] == 'bin':
+        # Try examining the local directory (such as a venv) for
+        # matching metadata.
+        tryVenv = os.path.dirname(tryBinDir)
+        tryIconsDir = os.path.join(tryVenv, "share", "icons")
+        tryIcons = os.listdir(tryIconsDir)
+        if len(tryIcons) == 1:
+            packageIcon = os.path.join(tryIconsDir, tryIcons[0])
+            error('* detected packageIcon "{}"'
+                  ''.format(packageIcon))
+        else:
+            error('* There was more than one image in "{}"'
+                  ' so the icon name is unknown: {}'
+                  ''.format(tryIconsDir, tryIcons))
+        tryShortcutsDir = os.path.join(tryVenv, "share", "applications")
+        tryShortcuts = os.listdir(tryShortcutsDir)
+        if len(tryShortcuts) == 1:
+            packageShortcut = os.path.join(tryShortcutsDir,
+                                           tryShortcuts[0])
+            error('* detected packageShortcut "{}"'
+                  ''.format(packageShortcut))
+        else:
+            error('* There was more than one file in "{}"'
+                  ' so the icon name is unknown: {}'
+                  ''.format(tryShortcutsDir, tryShortcuts))
+    else:
+        error('* There doesn\'t appear to be a virtualenv structure'
+              ' because "{}" is not named bin.'
+              ''.format(tryBinDir))
+    if packageIcon is not None:
+        icon_path = packageIcon
+    if packageShortcut is not None:
+        shortcut_data = format_shortcut(
+            None,
+            dict(
+                Exec=dst_bin_path,
+                TryExec=dst_bin_path,
+                Name=caption,
+                Icon=icon_path,
+            ),
+            path=packageShortcut,
+        )
+    else:
+        shortcut_data = shortcut_data_template.format(
+            Exec=dst_bin_path,
+            Name=caption,
+            Icon=icon_path,
+        )
     # ^ IF CHANGES, also update `print("  Exec=` etc. below
     #   so that the log matches.
     for knownLuid, knownFields in shortcutMetas.items():
