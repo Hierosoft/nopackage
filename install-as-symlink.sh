@@ -6,7 +6,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-src_sc="nopackage/dist/share/applications/nopackage.desktop"
+src_sc="nopackage/usr/share/applications/nopackage.desktop"
 if [ ! -f "$src_sc" ]; then
     echo "Error: \"$src_sc\" is missing. You must run this script from the nopackage repo (the same directory as runinplace.rc)"
     exit 1
