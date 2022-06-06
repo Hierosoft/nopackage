@@ -153,20 +153,27 @@ verbose = False
 for argI in range(1, len(sys.argv)):
     arg = sys.argv[argI]
     if arg.startswith("--"):
-        if arg == "--debug":
-            verbose = True
-        elif arg == "--verbose":
-            verbose = True
+        if arg == "--verbose":
+            verbose = 1
+        elif arg == "--debug":
+            verbose = 2
 
 
-def error(*args, **kwargs):
+def echo0(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def debug(msg):
+def echo1(msg):
     if verbose < 1:
         return
-    error("[debug] {}".format(msg))
+    echo0("[verbose] {}".format(msg))
+
+
+def echo2(msg):
+    if verbose < 2:
+        return
+    echo0("[debug] {}".format(msg))
+
 
 # region same as linuxpreinstall.ggrep
 
@@ -279,7 +286,7 @@ my_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 profile = os.environ.get("HOME")
-if profile is None:
+if platform.system() == "Windows":
     profile = os.environ.get("USERPROFILE")
     AppDatas = os.path.join(profile, "AppData", "Local")
     if not os.path.isdir(AppDatas):
@@ -293,6 +300,7 @@ else:
     local_path = os.path.join(profile, ".local")
     share_path = os.path.join(local_path, "share")
     icons_path = os.path.join(share_path, "pixmaps")
+    # TODO: use "Application Support" directory on darwin.
 if not os.path.isdir(myAppData):
     os.makedirs(myAppData)
 lib64 = os.path.join(local_path, "lib64")
@@ -315,7 +323,7 @@ if not os.path.isfile(distGoodFlag):
                        "".format(distGoodFlag))
 else:
     pass
-    # error("* Checking for {}...OK".format(distGoodFlag))
+    # echo0("* Checking for {}...OK".format(distGoodFlag))
 bad_id_flag = ("you must use the id from"
                " the list of known installed programs")
 
@@ -457,7 +465,7 @@ def format_shortcut(shortcut_data, meta, path=None, add_all=True):
                 line = rawL.strip()
                 shortcut_data += line + "\n"
     if "\r\n" in shortcut_data:
-        error("* Warning: converting \\r\\n newlines")
+        echo0("* Warning: converting \\r\\n newlines")
     lines = shortcut_data.split("\n")
     lineN = 0
     section = None
@@ -473,7 +481,7 @@ def format_shortcut(shortcut_data, meta, path=None, add_all=True):
         elif section is not None:
             signI = line.find("=")
             if signI < 1:
-                error("{}:{}: unknown format (no assignment): {}"
+                echo0("{}:{}: unknown format (no assignment): {}"
                       "".format(path, lineN, line))
                 result += line + "\n"
                 continue
@@ -485,7 +493,7 @@ def format_shortcut(shortcut_data, meta, path=None, add_all=True):
                 marks[name] = True
             result += "{}={}\n".format(name, value)
         else:
-            error("{}:{}: unknown format (no section): {}"
+            echo0("{}:{}: unknown format (no section): {}"
                   "".format(path, lineN, line))
             result += line + "\n"
     if add_all:
@@ -572,7 +580,7 @@ def decode_py_val(valueStr, lineN=-1, path="(generated)"):
         return datetime.strptime(valueStr, giteaSanitizedDtFmt)
     except ValueError as ex:
         if "does not match format" not in str(ex):
-            error("{}:{}: WARNING: \"{}\" doesn't seem to be a date but"
+            echo0("{}:{}: WARNING: \"{}\" doesn't seem to be a date but"
                   " the error when trying to parse it is not clear: {}"
                   "".format(path, lineN, valueStr, str(ex)))
     return valueStr
@@ -637,7 +645,7 @@ def getProgramValue(luid, key):
 
 def getDeepValues(category, luid, key):
     if localMachine.get(category) is None:
-        error("Warning: getDeepValues didn't find the category {}"
+        echo0("Warning: getDeepValues didn't find the category {}"
               "".format(category))
         return None
     if localMachine[category].get(luid) is None:
@@ -681,7 +689,7 @@ def addDeepValue(category, luid, key, value, unique=True):
         in the list named by `key`.
     '''
     if localMachine.get(category) is None:
-        error("Warning: addDeepValue didn't find the category {}"
+        echo0("Warning: addDeepValue didn't find the category {}"
               "".format(category))
         localMachine[category] = {}
     if localMachine[category].get(luid) is None:
@@ -1264,10 +1272,10 @@ class PackageInfo:
             startChar += 1
             if startChar >= len(fnamePartial):
                 msg =  noAlphaErrorFmt.format(self.fname, fnamePartial)
-                error(msg)
-                error("raw_src_path: {}".format(raw_src_path))
-                error("src_path: {}".format(src_path))
-                error("kwargs: {}".format(kwargs))
+                echo0(msg)
+                echo0("raw_src_path: {}".format(raw_src_path))
+                echo0("src_path: {}".format(src_path))
+                echo0("kwargs: {}".format(kwargs))
                 raise ValueError(msg)
                 # print(msg)
                 # break
@@ -1345,7 +1353,7 @@ class PackageInfo:
                                            encode_py_val(fnamePartial),
                                            me, sh_literal(src_path)))
             else:
-                error("WARNING: no version is in {}"
+                echo0("WARNING: no version is in {}"
                       "".format(fnamePartial))
         if self.version is None:
             # INFO: Any "v" prefix was already removed and multi-part
@@ -1660,23 +1668,23 @@ logPath = os.path.join(myAppData, "nopackage.log")
 if os.path.isfile(oldLMP):
     if not os.path.isfile(localMachineMetaPath):
         shutil.move(oldLMP, localMachineMetaPath)
-        error("* migrated old metadata:")
-        error("mv {} {}"
+        echo0("* migrated old metadata:")
+        echo0("mv {} {}"
               "".format(sh_literal(oldLMP),
                         sh_literal(localMachineMetaPath)))
 if os.path.isfile(oldLP):
     if not os.path.isfile(logPath):
         shutil.move(oldLP, logPath)
-        error("* migrated an old log:")
-        error("mv {} {}"
+        echo0("* migrated an old log:")
+        echo0("mv {} {}"
               "".format(sh_literal(oldLP), sh_literal(logPath)))
     else:
-        error("WARNING: There is an old {} which should be prepended to"
+        echo0("WARNING: There is an old {} which should be prepended to"
               " the new {}."
               "".format(sh_literal(oldLP), sh_literal(logPath)))
 else:
     pass
-    # error("INFO: There is no {}".format(oldLP))
+    # echo0("INFO: There is no {}".format(oldLP))
 
 localMachine = {
     'programs': {}
@@ -1715,7 +1723,7 @@ def fillProgramMeta(programMeta):
 
 if not os.path.isfile(localMachineMetaPath):
     if os.path.isfile(logPath):
-        error("* generating {} from {}"
+        echo0("* generating {} from {}"
               "".format(localMachineMetaPath, logPath))
         names = set([])
         programs = localMachine['programs']
@@ -1756,7 +1764,7 @@ if not os.path.isfile(localMachineMetaPath):
                 if signI < 0:
                     signI = line.find(":")
                 if signI < 0:
-                    error("{}:{}: Unrecognized line format: {}"
+                    echo0("{}:{}: Unrecognized line format: {}"
                           "".format(logPath, lineN, line))
                     continue
                 name = line[:signI]
@@ -1768,14 +1776,14 @@ if not os.path.isfile(localMachineMetaPath):
                     if thisMeta.get('src_path') is not None:
                         thisMeta = fillProgramMeta(thisMeta)
                         if thisMeta.get('luid') is None:
-                            error("WARNING: A luid was not determined"
+                            echo0("WARNING: A luid was not determined"
                                   " for {}".format(thisMeta))
                         else:
                             programs[thisMeta['luid']] = thisMeta
-                            debug("ENTERED program: {}"
+                            echo1("ENTERED program: {}"
                                   "".format(thisMeta['luid']))
                     elif len(thisMeta) > 2:
-                        error("WARNING: There is no src_path in {}"
+                        echo0("WARNING: There is no src_path in {}"
                               "".format(thisMeta))
                     thisMeta = {
                         'logLineNumber': lineN,
@@ -1812,26 +1820,26 @@ if not os.path.isfile(localMachineMetaPath):
                     thisMeta['uninstall_shortcut'] = value
                     thisMeta['installed'] = False
                 else:
-                    error("{}:{}: WARNING: The line variable name {} is"
+                    echo0("{}:{}: WARNING: The line variable name {} is"
                           " unrecognized for: {}"
                           "".format(logPath, lineN, name, thisMeta))
             # The loop is over, so get the last one:
             if thisMeta.get('src_path') is not None:
                 thisMeta = fillProgramMeta(thisMeta)
                 if thisMeta.get('luid') is None:
-                    error("WARNING: A luid was not determined for"
+                    echo0("WARNING: A luid was not determined for"
                           " {}".format(thisMeta))
                 else:
                     programs[thisMeta['luid']] = thisMeta
             elif len(thisMeta) > 2:
-                error("WARNING: There is no src_path in {}"
+                echo0("WARNING: There is no src_path in {}"
                       "".format(thisMeta))
 
 
-        # error("names: {}".format(names))
+        # echo0("names: {}".format(names))
         # ^ should match validNames
-        error("")
-        error("localMachine: {}"
+        echo0("")
+        echo0("localMachine: {}"
               "".format(json.dumps(localMachine, indent=2)))
         with open(localMachineMetaPath, 'w') as outs:
             json.dump(localMachine, outs, indent=2)
@@ -1839,7 +1847,7 @@ else:
     with open(localMachineMetaPath, 'r') as ins:
         localMachine = json.load(ins)
 
-    error("* using installed programs metadata: {}"
+    echo0("* using installed programs metadata: {}"
           "".format(localMachineMetaPath))
 fm = None
 
@@ -1964,11 +1972,11 @@ def install_program_in_place(src_path, **kwargs):
         tryLuid = os.path.basename(src_path)
         knownMeta = localMachine['programs'].get(tryLuid)
     # if knownMeta is None:
-    #     debug('There is no meta for "{}"'.format(src_path))
+    #     echo1('There is no meta for "{}"'.format(src_path))
     # ^ In case src_path is a luid, get some metadata.
     is_dir = None
     if knownMeta is not None:
-        debug("The program metadata for '{}' in {} will be used."
+        echo1("The program metadata for '{}' in {} will be used."
               "".format(knownMeta['luid'], localMachineMetaPath))
         luid = knownMeta.get('luid')
         src_path = knownMeta.get('src_path')
@@ -2271,7 +2279,7 @@ def install_program_in_place(src_path, **kwargs):
         for ending in endings:
             if src_path.lower()[-(len(ending)):] == ending:
                 dirname = src_path[:-(len(ending))]
-                debug("* generated dirname {} from src_path {}"
+                echo1("* generated dirname {} from src_path {}"
                       "".format(dirname, src_path))
                 found_ending = ending
                 ar_cat = category
@@ -2442,8 +2450,8 @@ def install_program_in_place(src_path, **kwargs):
 
     if src_path is None:
         usage()
-        error("")
-        error("Error: You must specify a path to a binary file.")
+        echo0("")
+        echo0("Error: You must specify a path to a binary file.")
         return False
     elif not os.path.isfile(src_path):
         src_name = os.path.split(src_path)[-1]
@@ -2502,18 +2510,18 @@ def install_program_in_place(src_path, **kwargs):
 
     print("* using programs path: '{}'".format(dst_programs))
     # dirname = os.path.split(dirpath)[-1]
-    # debug("* generated dirname {} from dirpath {}"
+    # echo1("* generated dirname {} from dirpath {}"
     #       "".format(dirname, dirpath))
-    debug("* dirname: {}"
+    echo1("* dirname: {}"
           "".format(dirname))
 
     # luid = None
     applications = os.path.join(share_path, "applications")
     if (casedName is None) or (version is None):
-        debug("* casedName:{} version:{} () so detecting..."
+        echo1("* casedName:{} version:{} () so detecting..."
               "".format(casedName, version))
         # try_names = [filename, dirname]
-        # debug("* detecting name and version from {}".format(src_path))
+        # echo1("* detecting name and version from {}".format(src_path))
         # if os.path.isdir(dirpath)
         try_sources = []
         # if not src_path.lower().endswith(".appimage"):
@@ -2522,7 +2530,7 @@ def install_program_in_place(src_path, **kwargs):
         try_sources.append(src_path)
         pkg = None
         pkgs = []
-        error("* detecting name and version from any of {}"
+        echo0("* detecting name and version from any of {}"
               "".format(try_sources))
         for try_src_i in range(len(try_sources)):
             try_source = try_sources[try_src_i]
@@ -2782,7 +2790,7 @@ def install_program_in_place(src_path, **kwargs):
                                       encode_py_val(dst_path))
                         )
     else:
-        error("* using setting for move_what: {}"
+        echo0("* using setting for move_what: {}"
               "".format(move_what))
     if dirname is not None:
         dst_dirpath = os.path.join(dst_programs, dirname)
@@ -2817,12 +2825,12 @@ def install_program_in_place(src_path, **kwargs):
                                " are the same, preventing"
                                " pull_back.")
     setProgramValue(luid, 'dst_path', dst_path)
-    debug("dst_path: {}".format(encode_py_val(dst_path)))
+    echo1("dst_path: {}".format(encode_py_val(dst_path)))
 
     # dst_dirpath and dirname should ONLY be not None if the folder
     # is being moved (and renamed to dirname):
-    debug("dst_dirpath: {}".format(encode_py_val(dst_dirpath)))
-    debug("dirname: {}".format(encode_py_val(dirname)))
+    echo1("dst_dirpath: {}".format(encode_py_val(dst_dirpath)))
+    echo1("dirname: {}".format(encode_py_val(dirname)))
 
     dst_bin_path = None
     if os.path.isfile(src_path) or os.path.isfile(dst_path):
@@ -2830,7 +2838,7 @@ def install_program_in_place(src_path, **kwargs):
             # Do NOT set it to programs, or it may be erased/overwritten
             # dst_dirpath = dst_programs
             # dirname = os.path.split(dst_dirpath)[1]
-            # debug("* detected dst_dirpath "
+            # echo1("* detected dst_dirpath "
             #       "".format(encode_py_val(move_what)))
             dst_bin_path = dst_path
             pass
@@ -2839,7 +2847,7 @@ def install_program_in_place(src_path, **kwargs):
                   " 'directory' so the dst_dirpath {} may not be"
                   " correct.".format(encode_py_val(dst_dirpath)))
 
-    debug("move_what: {}".format(encode_py_val(move_what)))
+    echo1("move_what: {}".format(encode_py_val(move_what)))
     if not do_uninstall:
         if not multiVersion:
             setProgramValue(luid, 'move_what', move_what)
@@ -2930,7 +2938,7 @@ def install_program_in_place(src_path, **kwargs):
             if os.path.isfile(src_path):
                 bin_name = os.path.split(src_path)[-1]
                 dst_bin_path = os.path.join(dst_path, bin_name)
-                debug("* set dst_bin_path to \"{}\" since src_path"
+                echo1("* set dst_bin_path to \"{}\" since src_path"
                       " was a file."
                       "".format(dst_bin_path))
 
@@ -2942,9 +2950,9 @@ def install_program_in_place(src_path, **kwargs):
         elif os.path.isfile(src_path):
             setProgramValue(luid, 'is_dir', False)
         else:
-            error("* is_dir wasn't set since \"{}\" doesn't exist."
+            echo0("* is_dir wasn't set since \"{}\" doesn't exist."
                   "".format(src_path))
-        debug("* move_what: {}".format(encode_py_val(move_what)))
+        echo1("* move_what: {}".format(encode_py_val(move_what)))
     # Still set generic values for the program even if multiVersion,
     # so that the last install is recorded:
     setProgramValue(luid, 'src_path', src_path)
@@ -2956,7 +2964,7 @@ def install_program_in_place(src_path, **kwargs):
             for k,v in gotMeta.items():
                 setPackageValue(sc_name, k, v)
         else:
-            error("WARNING: thisPkg is None after move_what, so the"
+            echo0("WARNING: thisPkg is None after move_what, so the"
                   " derived metadata won't be recorded.")
         '''
         # ^ thisPkg referenced before assignment
@@ -3018,10 +3026,10 @@ def install_program_in_place(src_path, **kwargs):
         tryIcons = os.listdir(tryIconsDir)
         if len(tryIcons) == 1:
             packageIcon = os.path.join(tryIconsDir, tryIcons[0])
-            error('* detected packageIcon "{}"'
+            echo0('* detected packageIcon "{}"'
                   ''.format(packageIcon))
         else:
-            error('* There was more than one image in "{}"'
+            echo0('* There was more than one image in "{}"'
                   ' so the icon name is unknown: {}'
                   ''.format(tryIconsDir, tryIcons))
         tryShortcutsDir = os.path.join(tryVenv, "share", "applications")
@@ -3029,14 +3037,14 @@ def install_program_in_place(src_path, **kwargs):
         if len(tryShortcuts) == 1:
             packageShortcut = os.path.join(tryShortcutsDir,
                                            tryShortcuts[0])
-            error('* detected packageShortcut "{}"'
+            echo0('* detected packageShortcut "{}"'
                   ''.format(packageShortcut))
         else:
-            error('* There was more than one file in "{}"'
+            echo0('* There was more than one file in "{}"'
                   ' so the icon name is unknown: {}'
                   ''.format(tryShortcutsDir, tryShortcuts))
     else:
-        error('* checking for a virtualenv...'
+        echo0('* checking for a virtualenv...'
               'no (since "{}" is not named bin).'
               ''.format(tryBinDir))
     if packageIcon is not None:
@@ -3119,14 +3127,14 @@ def install_program_in_place(src_path, **kwargs):
         if try_sc_path is not None:
             if os.path.isfile(try_sc_path):
                 if sc_path != try_sc_path:
-                    error("WARNING: sc_path {} will be corrected to"
+                    echo0("WARNING: sc_path {} will be corrected to"
                           " existing uninstall_shortcut {}."
                           "".format(encode_py_val(sc_path),
                                     encode_py_val(try_sc_path)))
                     sc_path = try_sc_path
                     setProgramValue(luid, "sc_path", sc_path)
             else:
-                error("WARNING: uninstall_shortcut {} does not exist."
+                echo0("WARNING: uninstall_shortcut {} does not exist."
                       " The sc_path {} will be used instead."
                       "".format(encode_py_val(sc_path)))
         logLn("uninstall_shortcut:{}".format(sc_path))
@@ -3240,8 +3248,10 @@ def main():
             elif arg == "--help":
                 usage()
                 exit(0)
-            elif arg in ["--verbose", "--debug"]:
-                verbose = True
+            elif arg == "--verbose":
+                verbose = 1
+            elif arg == "--debug":
+                verbose = 2
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
                 exit(1)
@@ -3257,8 +3267,8 @@ def main():
                 print("A 3rd parameter is unexpected: '{}'".format(arg))
                 exit(1)
     if src_path is None:
-        error("")
-        error("Error: You must specify a source path.")
+        echo0("")
+        echo0("Error: You must specify a source path.")
         exit(1)
     src_path = os.path.abspath(src_path)
     if move_what == 'any':
