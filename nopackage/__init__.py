@@ -163,9 +163,116 @@ def error(*args, **kwargs):
 
 
 def debug(msg):
-    if not verbose:
+    if verbose < 1:
         return
     error("[debug] {}".format(msg))
+
+# region same as linuxpreinstall.ggrep
+
+def contains(haystack, needle, allow_blank=False, quiet=False):
+    '''
+    Check if the substring "needle" is in haystack. The behavior differs
+    from the Python "in" command according to the arguments described
+    below.
+
+    Sequential arguments:
+    haystack -- a string to look in
+    needle -- a string for which to look
+    allow_blank -- Instead of raising an exception on a blank needle,
+        return False and show a warning (unless quiet).
+    quiet -- Do not report errors to stderr.
+
+    Raises:
+    ValueError -- If allow_blank is not True, a blank needle will raise
+        a ValueError, otherwise there will simply be a False return.
+    TypeError -- If no other error occurs, the "in" command will raise
+        "TypeError: argument of type 'NoneType' is not iterable" if
+        haystack is None (or haystack and needle are None), or
+        "TypeError: 'in <string>' requires string as left operand, not
+        NoneType" it needle is None.
+    '''
+    if len(needle) == 0:
+        if not allow_blank:
+            raise ValueError(
+                'The needle can\'t be blank or it would match all.'
+                ' Set to "*" to match all explicitly.'
+            )
+        else:
+            if not quiet:
+                echo0("The needle is blank so the match will be False.")
+        return False
+    return needle in haystack
+
+
+def any_contains(haystacks, needle, allow_blank=False, quiet=False,
+                 case_sensitive=True):
+    '''
+    Check whether any haystack contains the needle.
+    For documentation of keyword arguments, see the "contains" function.
+
+    Returns:
+    bool -- The needle is in any haystack.
+    '''
+    if not case_sensitive:
+        needle = needle.lower()
+    for rawH in haystacks:
+        haystack = rawH
+        if not case_sensitive:
+            haystack = rawH.lower()
+        # Passing case_sensitive isn't necessary since lower()
+        # is already one in that case above:
+        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
+            echo1("is_in_any: {} is in {}".format(needle, haystack))
+            return True
+    return False
+
+
+def contains_any(haystack, needles, allow_blank=False, quiet=False,
+                 case_sensitive=True):
+    '''
+    Check whether the haystack contains any of the needles.
+    For documentation of keyword arguments, see the "contains" function.
+
+    Returns:
+    bool -- Any needle is in the haystack.
+    '''
+    if not case_sensitive:
+        needle = haystack.lower()
+    for rawN in needles:
+        needle = rawN
+        if not case_sensitive:
+            needle = rawN.lower()
+        # Passing case_sensitive isn't necessary since lower()
+        # is already one in that case above:
+        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
+            echo1("is_in_any: {} is in {}".format(needle, haystack))
+            return True
+    return False
+
+
+# endregion same as linuxpreinstall.ggrep
+
+sh_specials = "!\"#$&'()*,;<>?[]\\^`{}|~"
+# ^ See <https://unix.stackexchange.com/a/357932/343286>
+# TODO: "= - in zsh, when it's at the beginning of a file name
+# (filename expansion with PATH lookup)."
+# -<https://unix.stackexchange.com/a/357932/343286>
+
+def sh_literal(v):
+    '''
+    Convert the value to a bash-ready string.
+    '''
+    if v is None:
+        raise ValueError("None is not acceptable for a bash value")
+    my_q = None
+    if contains_any(v, sh_specials):
+        my_q = "'"
+    if my_q is not None:
+        for c in sh_specials:
+            v = v.replace(c, "\\"+c)
+        return my_q+v+my_q
+    return v
+
 
 my_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -398,15 +505,76 @@ def getProgramIDs():
 
 
 def encode_py_val(v):
+    '''
+    Convert the value to Python code.
+    '''
+    # a.k.a. toPy
+    # formerly getSymbolFromValue
+    '''
+    # This can also be done by converting to an ast tree using the
+    # ast (abstract syntax tree) module, then back to python using
+    # astor, but astor is not prepackaged with Python.
     if v is True:
         return "True"
     if v is False:
         return "False"
     if v is None:
-        return None
+        return "None"
     if isinstance(v, str):
         return '"' + v.replace('"', "\\\"") + '"'
     return str(v)
+    '''
+    # def getSymbolFromValue(v):
+    if isinstance(v, str):
+        return '"{}"'.format(v.replace("\"", "\\\""))
+    if isinstance(v, datetime):
+        return '"' + datetime.strftime(v, giteaSanitizedDtFmt) + '"'
+    return str(v)
+
+
+def decode_py_val(valueStr, lineN=-1, path="(generated)"):
+    '''
+    Convert a symbolic value such as `"\"hello\""` or `"\"True\""` to a
+    real value such as `"hello"` or `True`.
+    This simplistic compared to str_to_value in enissue.py in
+    https://github.com/poikilos/EnlivenMinetest.
+
+    Keyword arguments:
+    path -- The file (used for error reporting only).
+    lineN -- The line number in the file (used for error reporting
+        only).
+    '''
+    # formerly getValueFromSymbol
+    # def getValueFromSymbol(valueStr, lineN=-1, path="(generated)"):
+    valueL = None
+    if valueStr is not None:
+        valueL = valueStr.lower()
+    if valueStr == "None":
+        return None
+    if valueStr == "True":
+        return True
+    if valueStr == "False":
+        return False
+    try:
+        return int(valueStr)
+    except ValueError as ex:
+        pass
+    try:
+        return float(valueStr)
+    except ValueError as ex:
+        pass
+    if valueStr.startswith("'") and valueStr.endswith("'"):
+        return valueStr[1:-1].replace('\\\'', '\'')
+    if valueStr.startswith('"') and valueStr.endswith('"'):
+        return valueStr[1:-1].replace("\\\"", "\"")
+    try:
+        return datetime.strptime(valueStr, giteaSanitizedDtFmt)
+    except ValueError as ex:
+        if "does not match format" not in str(ex):
+            error("{}:{}: WARNING: \"{}\" doesn't seem to be a date but"
+                  " the error when trying to parse it is not clear: {}"
+                  "".format(path, lineN, valueStr, str(ex)))
+    return valueStr
 
 
 def setDeepValue(category, luid, key, value):
@@ -627,10 +795,11 @@ def tests():
         test_subprocess_run(test_return_sh)
     else:
         print("* [{}] skipped the process return test since"
-              " \"{}\" does not exist.".format(me, test_return_sh))
+              " {} does not exist."
+              "".format(me, sh_literal(test_return_sh)))
         #raise RuntimeError("The {} process return test failed since"
-        #                   " \"{}\" does not exist."
-        #                   "".format(me, test_return_sh))
+        #                   " {} does not exist."
+        #                   "".format(me, sh_literal(test_return_sh)))
     # else:
     #     print("* The exception test was skipped since you are using"
     #           " Python's implementation of CompletedProcess.")
@@ -1026,24 +1195,25 @@ class PackageInfo:
         if is_dir is None:
             if not os.path.exists(src_path) and not self.dry_run:
                 msg = (
-                    "src_path \"{}\" must exist or you must specify the"
+                    "src_path {} must exist or you must specify the"
                     " is_dir keyword argument for PackageInfo"
                     " init (only if running a test)."
-                    "".format(src_path)
+                    "".format(sh_literal(src_path))
                 )
                 if do_uninstall:
                     msg_fmt = (
-                        "src_path \"{}\" doesn't exist so"
-                            " whether it is a directory can't be determined and wasn't in {}. If you are uninstalling"
-                           " without the full file/folder name of the"
-                           " install source, " + bad_id_flag
-                           + ": {} (from {})."
+                        "src_path {} doesn't exist so"
+                        " whether it is a directory can't be determined"
+                        " and wasn't in {}. If you are uninstalling"
+                        " without the full file/folder name of the"
+                        " install source, " + bad_id_flag
+                        + ": {} (from {})."
                     )
                     msg = msg_fmt.format(
-                        src_path,
-                        localMachineMetaPath,
+                        sh_literal(src_path),
+                        sh_literal(localMachineMetaPath),
                         getProgramIDs(),
-                        localMachineMetaPath,
+                        sh_literal(localMachineMetaPath),
                     )
                 # raise ValueError(msg + " {}".format(self.toDict()))
                 # ^ every meta is None at this point.
@@ -1109,8 +1279,8 @@ class PackageInfo:
         part2 = None
         archI = -1
         if PackageInfo.verbosity > 0:
-            print("* name without extension: \"{}\""
-                  "".format(fnamePartial))
+            print("* name without extension: {}"
+                  "".format(encode_py_val(fnamePartial)))
         platformI = -1
         versionI = -1
         if len(parts) < 2:
@@ -1167,11 +1337,12 @@ class PackageInfo:
             if not self.dry_run:
                 usage()
                 raise ValueError(PackageInfo.NO_VER_FLAG + " (any of"
-                                 " '{}' or '.' is not in \"{}\" and you"
+                                 " '{}' or '.' is not in {} and you"
                                  " didn't specify a version such as:\n"
                                  " {} {} --version x"
                                  "".format(PackageInfo.DELIMITERS,
-                                           fnamePartial, me, src_path))
+                                           encode_py_val(fnamePartial),
+                                           me, sh_literal(src_path)))
             else:
                 error("WARNING: no version is in {}"
                       "".format(fnamePartial))
@@ -1193,8 +1364,8 @@ class PackageInfo:
         if versionI > -1:
             nameEnder = versionI
             if PackageInfo.verbosity > 0:
-                print("* ending name at version \"{}\""
-                      "".format(parts[versionI]))
+                print("* ending name at version {}"
+                      "".format(encode_py_val(parts[versionI])))
         if platformI > -1:
             if nameEnder < 0 or (platformI < nameEnder):
                 nameEnder = platformI
@@ -1224,8 +1395,8 @@ class PackageInfo:
             else:
                 print("WARNING: there is no name ender such as arch,"
                       " platform or version, so the first part will be"
-                      " the name: \"{}\"."
-                      "".format(self.casedName))
+                      " the name: {}."
+                      "".format(encode_py_val(self.casedName)))
             if PackageInfo.verbosity > 0:
                 print("* using '{}' as human-readable name"
                       " before adding version".format(self.casedName))
@@ -1252,11 +1423,12 @@ class PackageInfo:
             if tryCasedName is None:
                 if self.casedName.lower() == self.casedName:
                     if PackageInfo.verbosity > 1:
-                        print("* The program \"{}\" is not in the"
+                        print("* The program {} is not in the"
                               " casedNames dict and is all lowercase,"
-                              " so the caption \"{}\" will become"
+                              " so the caption {} will become"
                               " title case (parts: {})."
-                              "".format(self.casedName, fnamePartial,
+                              "".format(encode_py_val(self.casedName),
+                                        encode_py_val(fnamePartial),
                                         parts))
                     self.casedName = self.casedName.title()
                 # else use self.casedName since not all lower.
@@ -1267,9 +1439,9 @@ class PackageInfo:
                           "".format(self.luid, tryCasedName))
 
         if PackageInfo.verbosity > 0:
-            print("* using \"{}\" as icon filename prefix (luid)"
+            print("* using {} as icon filename prefix (luid)"
                   " (The version will be added later if multiVersion)"
-                  "".format(self.luid))
+                  "".format(encode_py_val(self.luid)))
 
         if self.caption is None:
             if versionI > -1:
@@ -1289,8 +1461,8 @@ class PackageInfo:
                     print("  OK")
                 else:
                     if PackageInfo.verbosity > 0:
-                        print("  - skipped: it already ends with \"{}\""
-                              "".format(suffix))
+                        print("  - skipped: it already ends with {}"
+                              "".format(encode_py_val(suffix)))
 
     # @classmethod
     # def unsplitArch(cls, tmpParts):
@@ -1488,17 +1660,19 @@ if os.path.isfile(oldLMP):
     if not os.path.isfile(localMachineMetaPath):
         shutil.move(oldLMP, localMachineMetaPath)
         error("* migrated old metadata:")
-        error("mv \"{}\" \"{}\""
-              "".format(oldLMP, localMachineMetaPath))
+        error("mv {} {}"
+              "".format(sh_literal(oldLMP),
+                        sh_literal(localMachineMetaPath)))
 if os.path.isfile(oldLP):
     if not os.path.isfile(logPath):
         shutil.move(oldLP, logPath)
         error("* migrated an old log:")
-        error("mv \"{}\" \"{}\""
-              "".format(oldLP, logPath))
+        error("mv {} {}"
+              "".format(sh_literal(oldLP), sh_literal(logPath)))
     else:
         error("WARNING: There is an old {} which should be prepended to"
-              " the new {}.".format(oldLP, logPath))
+              " the new {}."
+              "".format(sh_literal(oldLP), sh_literal(logPath)))
 else:
     pass
     # error("INFO: There is no {}".format(oldLP))
@@ -1514,43 +1688,6 @@ giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
 sanitizedDtExampleS = "2021-11-25T12:00:13-0500"
 
 
-def getValueFromSymbol(valueStr, lineN=-1, path="(generated)"):
-    '''
-    Convert a symbolic value such as `"\"hello\""` to a real value such
-    as `"hello"`.
-    This simplistic compared to str_to_value in enissue.py in
-    https://github.com/poikilos/EnlivenMinetest.
-
-    Keyword arguments:
-    path -- The file (used for error reporting only).
-    lineN -- The line number in the file (used for error reporting
-        only).
-    '''
-    valueL = None
-    if valueStr is not None:
-        valueL = valueStr.lower()
-    if valueStr == "None":
-        return None
-
-    if valueStr.startswith("'") and valueStr.endswith("'"):
-        return valueStr[1:-1].replace('\\\'', '\'')
-    if valueStr.startswith('"') and valueStr.endswith('"'):
-        return valueStr[1:-1].replace("\\\"", "\"")
-    try:
-        return datetime.strptime(valueStr, giteaSanitizedDtFmt)
-    except ValueError as ex:
-        if "does not match format" not in str(ex):
-            error("WARNING: {} doens't seem to be a date but the error"
-                  " when trying to parse it is not clear.")
-    return valueStr
-
-
-def getSymbolFromValue(value):
-    if isinstance(value, str):
-        return '"{}"'.format(value.replace("\"", "\\\""))
-    if isinstance(value, datetime):
-        return '"' + datetime.strftime(value, giteaSanitizedDtFmt) + '"'
-    return str(value)
 
 
 def fillProgramMeta(programMeta):
@@ -1623,7 +1760,8 @@ if not os.path.isfile(localMachineMetaPath):
                     continue
                 name = line[:signI]
                 valueStr = line[signI+1:]
-                value = getValueFromSymbol(valueStr)
+                value = decode_py_val(valueStr, lineN=lineN,
+                                      path=logPath)
                 names.add(name)
                 if name in regionStarters:
                     if thisMeta.get('src_path') is not None:
@@ -2897,8 +3035,8 @@ def install_program_in_place(src_path, **kwargs):
                   ' so the icon name is unknown: {}'
                   ''.format(tryShortcutsDir, tryShortcuts))
     else:
-        error('* There doesn\'t appear to be a virtualenv structure'
-              ' because "{}" is not named bin.'
+        error('* checking for a virtualenv...'
+              'no (since "{}" is not named bin).'
               ''.format(tryBinDir))
     if packageIcon is not None:
         icon_path = packageIcon
@@ -2968,20 +3106,46 @@ def install_program_in_place(src_path, **kwargs):
             # ^ Ensure the checks below use the found path.
 
     if do_uninstall:
+        logLn("sc_path:{}".format(sc_path))
+        # FIXME: At this point, cura is not known to be an appimage
+        #   if local_machine.json contains the wrong filename
+        #   (such as a version that isn't installed).
+        #   However, this may be due to the registry having the
+        #   incorrect value:
+        #   "sc_path":
+        #     "/home/owner/.local/share/applications/cura.desktop",
+        try_sc_path = getProgramValue(luid, "uninstall_shortcut")
+        if try_sc_path is not None:
+            if os.path.isfile(try_sc_path):
+                if sc_path != try_sc_path:
+                    error("WARNING: sc_path {} will be corrected to"
+                          " existing uninstall_shortcut {}."
+                          "".format(encode_py_val(sc_path),
+                                    encode_py_val(try_sc_path)))
+                    sc_path = try_sc_path
+                    setProgramValue(luid, "sc_path", sc_path)
+            else:
+                error("WARNING: uninstall_shortcut {} does not exist."
+                      " The sc_path {} will be used instead."
+                      "".format(encode_py_val(sc_path)))
         logLn("uninstall_shortcut:{}".format(sc_path))
         if os.path.isfile(sc_path):
             print(u_cmd_parts)
             install_proc = subprocess.run(u_cmd_parts)
+            xdg_msg = "succeeded"
             if install_proc.returncode != 0:
-                if os.path.isfile(sc_path):
-                    print("rm \"{}\"".format(sc_path))
-                    os.remove(sc_path)
-                else:
-                    print("{} failed but \"{}\" was not present so no"
-                          " steps seem to be necessary."
-                          "".format(" ".join(u_cmd_parts)))
+                xdg_msg = "failed"
+            if os.path.isfile(sc_path):
+                print("rm {}".format(sh_literal(sc_path)))
+                os.remove(sc_path)
+            else:
+                print("{} {}. {} was not present so no"
+                      " steps seem to be necessary."
+                      "".format(" ".join(u_cmd_parts), xdg_msg,
+                                encode_py_val(sc_path)))
         else:
-            print("* The shortcut was not present: {}".format(sc_path))
+            print("* The shortcut was not present: {}"
+                  "".format(encode_py_val(sc_path)))
         return True
     else:
         tmp_sc_dir_path = tempfile.mkdtemp()
