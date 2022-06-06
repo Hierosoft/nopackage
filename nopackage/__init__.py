@@ -91,10 +91,11 @@ except:
 # from subprocess import SubprocessError
 
 import subprocess
-try:
+python_mr = sys.version_info.major
+if python_mr > 2:  # try:
     # from subprocess import run as sp_run
     from subprocess import CompletedProcess
-except ImportError:
+else:  # except ImportError:
     # Python 2
     class CompletedProcess:
         _custom_impl = True
