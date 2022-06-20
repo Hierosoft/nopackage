@@ -10,6 +10,16 @@ versionedModule['urllib'] = 'urllib'
 if python_mr == 2:
     versionedModule['urllib'] = 'urllib2'
 
+install_requires = []
+
+if os.path.isfile("requirements.txt"):
+    with open("requirements.txt", "r") as ins:
+        for rawL in ins:
+            line = rawL.strip()
+            if len(line) < 1:
+                continue
+            install_requires.append(line)
+
 description = (
     "Automate the installation of any source with zero"
     " configuration. The source can be a zip or gz binary"
@@ -48,10 +58,11 @@ setuptools.setup(
     #   /distributing-packages-using-setuptools
     #   /?highlight=scripts#scripts>).
     entry_points={
-        'console_scripts': ['nopackage=nopackage:main'],
+        'console_scripts': [
+            'nopackage=nopackage:main',
+        ],
     },
-    install_requires=[
-    ],
+    install_requires=install_requires,
     # versionedModule['urllib'],
     # ^ "ERROR: Could not find a version that satisfies the requirement
     #   urllib (from nopackage) (from versions: none)
