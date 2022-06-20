@@ -8,7 +8,7 @@ from nopackage import (
     PackageInfo,
     find_all_any_ci,
     tests,
-    error as prerr,
+    echo0,
 )
 myPath = os.path.realpath(__file__)
 testsDir = os.path.dirname(myPath)
@@ -58,19 +58,19 @@ def assertEqual(v1, v2, tbs=None):
     if ((v1 is True) or (v2 is True) or (v1 is False) or (v2 is False)
             or (v1 is None) or (v2 is None)):
         if v1 is not v2:
-            prerr("")
-            prerr("{} is not {}".format(toPythonLiteral(v1),
+            echo0("")
+            echo0("{} is not {}".format(toPythonLiteral(v1),
                                         toPythonLiteral(v2)))
             if tbs is not None:
-                prerr("for {}".format(tbs))
+                echo0("for {}".format(tbs))
         assert(v1 is v2)
     else:
         if v1 != v2:
-            prerr("")
-            prerr("{} != {}".format(toPythonLiteral(v1),
+            echo0("")
+            echo0("{} != {}".format(toPythonLiteral(v1),
                                     toPythonLiteral(v2)))
             if tbs is not None:
-                prerr("for {}".format(tbs))
+                echo0("for {}".format(tbs))
         assert(v1 == v2)
 """
 
@@ -80,7 +80,7 @@ def assertAllEqual(list1, list2, tbs=None):
     [copied from pycodetools.parsing by author]
     '''
     if len(list1) != len(list2):
-        prerr("The lists are not the same length: list1={}"
+        echo0("The lists are not the same length: list1={}"
               " and list2={}".format(list1, list2))
         assertEqual(len(list1), len(list2))
     for i in range(len(list1)):
@@ -91,22 +91,22 @@ PackageInfo.verbosity = 2
 
 class TestNopackage(TestCase):
     def test_1_self(self):
-        prerr()
-        prerr()
-        prerr()
-        prerr("BEGIN nopackage self tests")
+        echo0()
+        echo0()
+        echo0()
+        echo0("BEGIN nopackage self tests")
         tests()
-        prerr("END nopackage self tests")
-        prerr()
-        prerr()
-        prerr()
+        echo0("END nopackage self tests")
+        echo0()
+        echo0()
+        echo0()
 
     def assertAllEqual(self, list1, list2, tbs=None):
             '''
             [copied from pycodetools.parsing by author]
             '''
             if len(list1) != len(list2):
-                prerr("The lists are not the same length: list1={}"
+                echo0("The lists are not the same length: list1={}"
                       " and list2={}".format(list1, list2))
                 self.assertEqual(len(list1), len(list2))
             for i in range(len(list1)):
@@ -114,7 +114,7 @@ class TestNopackage(TestCase):
                     self.assertEqual(list1[i], list2[i])
                 except AssertionError as ex:
                     if tbs is not None:
-                        prerr(tbs)
+                        echo0(tbs)
                     raise ex
 
     def test_2_name_parsing(self):
@@ -127,7 +127,7 @@ class TestNopackage(TestCase):
         )
         self.assertAllEqual(results, [(14, 'linux'), (29, 'X86_64')],
                             tbs="{} in {}".format(chunks, fn))
-        prerr("* find_all_any_ci test...OK ({} at {} in {})"
+        echo0("* find_all_any_ci test...OK ({} at {} in {})"
               "".format(chunks, results, fn))
 
         pkg = PackageInfo("flashprint_4.6.2_amd64.deb", is_dir=False)
@@ -209,6 +209,9 @@ class TestNopackage(TestCase):
         except ValueError as ex:
             if "no alphabetic" in str(ex):
                 found = True
+                echo0("- Parsing names with no alphabetic characters"
+                      " shouldn't be possible,"
+                      " so the test result is good.")
             else:
                 raise ex
         if not found:
@@ -279,7 +282,7 @@ class TestNopackage(TestCase):
         # ^ This is a better format (See the earlier comment containing
         #   "This is a better format").
         self.assertEqual(pkg.arch, "noarch")
-        prerr("{}:\n  {}".format(src_path, pkg))
+        echo0("{}:\n  {}".format(src_path, pkg))
 
         src_path = "monero-gui-linux-x64-v0.17.1.9.tar.bz2"
         pkg = PackageInfo(src_path, is_dir=False)
@@ -307,19 +310,19 @@ class TestNopackage(TestCase):
         self.assertEqual(pkg.version, "3.6")
 
         for fname in fileNames:
-            prerr("")
+            echo0("")
             pkg = PackageInfo(fname, is_dir=False)
-            prerr("{}:\n  {}".format(fname, pkg))
+            echo0("{}:\n  {}".format(fname, pkg))
 
         for fname in dirNames:
-            prerr("")
+            echo0("")
             pkg = PackageInfo(fname, is_dir=True)
-            prerr("{}:\n  {}".format(fname, pkg))
+            echo0("{}:\n  {}".format(fname, pkg))
 
     def test_bin_in_folder(self):
         src_path = os.path.join(testDataPath, "blender-3.0.1-linux-x64")
         file_path = os.path.join(src_path, "blender")
-        prerr("* testing non-versioned filename in versioned directory"
+        echo0("* testing non-versioned filename in versioned directory"
               " \"{}\"".format(src_path))
         pkg = PackageInfo(src_path)
         self.assertEqual(pkg.casedName, "Blender")
@@ -328,6 +331,6 @@ class TestNopackage(TestCase):
         self.assertEqual(pkg.luid, "blender")
 
 
-# prerr("")
-# prerr("All tests passed.")
-# prerr("")
+# echo0("")
+# echo0("All tests passed.")
+# echo0("")
