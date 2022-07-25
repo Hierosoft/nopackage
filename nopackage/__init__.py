@@ -33,7 +33,7 @@ nopackage --help
 
 
 '''
-
+from __future__ import print_function
 '''
 nopackage tries to install any folder or archived binary package.
 Copyright (C) 2019  Jake "Poikilos" Gustafson
