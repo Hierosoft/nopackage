@@ -66,8 +66,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 # region same as hierosoft (Hierosoft Update) and blnk
-python_mr = sys.version_info.major
-if python_mr >= 3:
+if sys.version_info.major >= 3:
     import urllib.request
     request = urllib.request
 else:
@@ -90,12 +89,11 @@ else:
 # from subprocess import CalledProcessError
 # from subprocess import SubprocessError
 
-python_mr = sys.version_info.major
-if python_mr > 2:  # try:
+if sys.version_info.major >= 3:
     # from subprocess import run as sp_run
     from subprocess import CompletedProcess
-else:  # except ImportError:
-    # Python 2
+else:
+    # This class is not in Python 2, so create a substitute.
     class CompletedProcess:
         _custom_impl = True
 
