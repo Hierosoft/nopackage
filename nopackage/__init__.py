@@ -174,116 +174,7 @@ def echo2(msg):
     return True
 
 
-# region same as linuxpreinstall.ggrep
-
-def contains(haystack, needle, allow_blank=False, quiet=False):
-    '''
-    Check if the substring "needle" is in haystack. The behavior differs
-    from the Python "in" command according to the arguments described
-    below.
-
-    Sequential arguments:
-    haystack -- a string to look in
-    needle -- a string for which to look
-    allow_blank -- Instead of raising an exception on a blank needle,
-        return False and show a warning (unless quiet).
-    quiet -- Do not report errors to stderr.
-
-    Raises:
-    ValueError -- If allow_blank is not True, a blank needle will raise
-        a ValueError, otherwise there will simply be a False return.
-    TypeError -- If no other error occurs, the "in" command will raise
-        "TypeError: argument of type 'NoneType' is not iterable" if
-        haystack is None (or haystack and needle are None), or
-        "TypeError: 'in <string>' requires string as left operand, not
-        NoneType" it needle is None.
-    '''
-    if len(needle) == 0:
-        if not allow_blank:
-            raise ValueError(
-                'The needle can\'t be blank or it would match all.'
-                ' Set to "*" to match all explicitly.'
-            )
-        else:
-            if not quiet:
-                echo0("The needle is blank so the match will be False.")
-        return False
-    return needle in haystack
-
-
-def any_contains(haystacks, needle, allow_blank=False, quiet=False,
-                 case_sensitive=True):
-    '''
-    Check whether any haystack contains the needle.
-    For documentation of keyword arguments, see the "contains" function.
-
-    Returns:
-    bool -- The needle is in any haystack.
-    '''
-    if not case_sensitive:
-        needle = needle.lower()
-    for rawH in haystacks:
-        haystack = rawH
-        if not case_sensitive:
-            haystack = rawH.lower()
-        # Passing case_sensitive isn't necessary since lower()
-        # is already one in that case above:
-        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
-            echo1("is_in_any: {} is in {}".format(needle, haystack))
-            return True
-    return False
-
-
-def contains_any(haystack, needles, allow_blank=False, quiet=False,
-                 case_sensitive=True):
-    '''
-    Check whether the haystack contains any of the needles.
-    For documentation of keyword arguments, see the "contains" function.
-
-    Returns:
-    bool -- Any needle is in the haystack.
-    '''
-    if not case_sensitive:
-        needle = haystack.lower()
-    for rawN in needles:
-        needle = rawN
-        if not case_sensitive:
-            needle = rawN.lower()
-        # Passing case_sensitive isn't necessary since lower()
-        # is already one in that case above:
-        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
-            echo1("is_in_any: {} is in {}".format(needle, haystack))
-            return True
-    return False
-
-
-# endregion same as linuxpreinstall.ggrep
-
-sh_specials = "!\"#$&'()*,;<>?[]\\^`{}|~"
-# ^ See <https://unix.stackexchange.com/a/357932/343286>
-# TODO: "= - in zsh, when it's at the beginning of a file name
-# (filename expansion with PATH lookup)."
-# -<https://unix.stackexchange.com/a/357932/343286>
-
-
-def sh_literal(v):
-    '''
-    Convert the value to a bash-ready string.
-    '''
-    if v is None:
-        raise ValueError("None is not acceptable for a bash value")
-    my_q = None
-    if contains_any(v, sh_specials):
-        my_q = "'"
-    if my_q is not None:
-        for c in sh_specials:
-            v = v.replace(c, "\\"+c)
-        return my_q+v+my_q
-    return v
-
-
 my_dir = os.path.dirname(os.path.realpath(__file__))
-
 
 profile = os.environ.get("HOME")
 if platform.system() == "Windows":
@@ -354,15 +245,41 @@ minimumUniquePartOfLuid["unityhub"] = "unity"
 hyphenate_names = [
     "ninja-ide",
 ]
-shortcutMetas = {}
-# ^ Store desktop file values except Icon (see iconLinks above).
-shortcutMetas['ninja-ide'] = {}
-shortcutMetas['ninja-ide']['Categories'] = "Qt;Development;IDE;TextEditor;"
-shortcutMetas['ninja-ide']['Keywords'] = "Text;Editor;"
-shortcutMetas['olive'] = {}
-shortcutMetas['olive']['Categories'] = "AudioVideo;Video;AudioVideoEditing;"
-shortcutMetas['mirage'] = {}
-shortcutMetas['mirage']['Categories'] = "Network;InstantMessaging;"
+# Store desktop file values (execpt Icon--see iconLinks above):
+shortcutMetas = {
+    'argouml': {
+        'Keywords': "Development;IDE;",
+        'Categories': "Development;IDE;",
+    },
+    'godot': {
+        'Keywords': "Development;IDE;",
+        'Categories': "Development;IDE;",
+    },
+    'mirage': {
+        'Categories': "Network;InstantMessaging;",
+    },
+    'ninja-ide': {
+        'Keywords': "Qt;Development;IDE;TextEditor;",
+        'Categories': "Text;Editor;",
+    },
+    'olive': {
+        'Categories': "AudioVideo;Video;AudioVideoEditing;",
+    },
+    'pycharm': {
+        'Keywords': "Development;IDE;",
+        'Categories': "Development;IDE;",
+    },
+    'staruml': {
+        'Keywords': "Development;IDE;",
+        'Categories': "Development;IDE;",
+    },
+    'unityhub': {
+        'Keywords': "Development;IDE;",
+        'Categories': "Development;IDE;",
+    },
+}
+
+
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
@@ -773,31 +690,114 @@ def addVersionedValue(luid, version, key, value):
 '''
 
 
-def test_CompletedProcessException(code):
-    proc = CompletedProcess(["(tests)"], code, sys.stdout,
-                            sys.stderr)
-    try:
-        proc.check_returncode()
-        raise ValueError("* The exception test failed (running"
-                         " check_returncode on returncode {} didn't"
-                         " succeed in producing CalledProcessError)"
-                         "".format(proc.returncode))
-    except subprocess.CalledProcessError:
-        pass
-        print("* The exception test passed.")
+# region same as pycodetool.ggrep
 
 
-def test_subprocess_run(argsOrString):
-    fn_msg = (" (Python {}'s standard implementation)"
-              "".format(sys.version_info[0]))
-    if hasattr(CompletedProcess, '_custom_impl'):
-        fn_msg = " (Python 2 polyfill)"
-    print("* Testing subprocess.run{} with {}..."
-          "".format(fn_msg, type(argsOrString).__name__))
-    proc = subprocess.run(argsOrString)
-    print("* proc.returncode: {}".format(proc.returncode))
-    print("* proc.stdout: {}".format(proc.stdout))
-    print("* proc.stderr: {}".format(proc.stdout))
+def contains(haystack, needle, allow_blank=False, quiet=False):
+    '''
+    Check if the substring "needle" is in haystack. The behavior differs
+    from the Python "in" command according to the arguments described
+    below.
+
+    Sequential arguments:
+    haystack -- a string to look in
+    needle -- a string for which to look
+    allow_blank -- Instead of raising an exception on a blank needle,
+        return False and show a warning (unless quiet).
+    quiet -- Do not report errors to stderr.
+
+    Raises:
+    ValueError -- If allow_blank is not True, a blank needle will raise
+        a ValueError, otherwise there will simply be a False return.
+    TypeError -- If no other error occurs, the "in" command will raise
+        "TypeError: argument of type 'NoneType' is not iterable" if
+        haystack is None (or haystack and needle are None), or
+        "TypeError: 'in <string>' requires string as left operand, not
+        NoneType" it needle is None.
+    '''
+    if len(needle) == 0:
+        if not allow_blank:
+            raise ValueError(
+                'The needle can\'t be blank or it would match all.'
+                ' Set to "*" to match all explicitly.'
+            )
+        else:
+            if not quiet:
+                echo0("The needle is blank so the match will be False.")
+        return False
+    return needle in haystack
+
+
+def any_contains(haystacks, needle, allow_blank=False, quiet=False,
+                 case_sensitive=True):
+    '''
+    Check whether any haystack contains the needle.
+    For documentation of keyword arguments, see the "contains" function.
+
+    Returns:
+    bool -- The needle is in any haystack.
+    '''
+    if not case_sensitive:
+        needle = needle.lower()
+    for rawH in haystacks:
+        haystack = rawH
+        if not case_sensitive:
+            haystack = rawH.lower()
+        # Passing case_sensitive isn't necessary since lower()
+        # is already one in that case above:
+        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
+            echo1("is_in_any: {} is in {}".format(needle, haystack))
+            return True
+    return False
+
+
+def contains_any(haystack, needles, allow_blank=False, quiet=False,
+                 case_sensitive=True):
+    '''
+    Check whether the haystack contains any of the needles.
+    For documentation of keyword arguments, see the "contains" function.
+
+    Returns:
+    bool -- Any needle is in the haystack.
+    '''
+    if not case_sensitive:
+        needle = haystack.lower()
+    for rawN in needles:
+        needle = rawN
+        if not case_sensitive:
+            needle = rawN.lower()
+        # Passing case_sensitive isn't necessary since lower()
+        # is already one in that case above:
+        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
+            echo1("is_in_any: {} is in {}".format(needle, haystack))
+            return True
+    return False
+
+
+# endregion same as pycodetool.ggrep
+
+
+sh_specials = "!\"#$&'()*,;<>?[]\\^`{}|~"
+# ^ See <https://unix.stackexchange.com/a/357932/343286>
+# TODO: "= - in zsh, when it's at the beginning of a file name
+# (filename expansion with PATH lookup)."
+# -<https://unix.stackexchange.com/a/357932/343286>
+
+
+def sh_literal(v):
+    '''
+    Convert the value to a bash-ready string.
+    '''
+    if v is None:
+        raise ValueError("None is not acceptable for a bash value")
+    my_q = None
+    if contains_any(v, sh_specials):
+        my_q = "'"
+    if my_q is not None:
+        for c in sh_specials:
+            v = v.replace(c, "\\"+c)
+        return my_q+v+my_q
+    return v
 
 
 def tests():
@@ -826,6 +826,33 @@ def tests():
 
 
 # TODO: Run tests() using nose.
+
+
+def test_CompletedProcessException(code):
+    proc = CompletedProcess(["(tests)"], code, sys.stdout,
+                            sys.stderr)
+    try:
+        proc.check_returncode()
+        raise ValueError("* The exception test failed (running"
+                         " check_returncode on returncode {} didn't"
+                         " succeed in producing CalledProcessError)"
+                         "".format(proc.returncode))
+    except subprocess.CalledProcessError:
+        pass
+        print("* The exception test passed.")
+
+
+def test_subprocess_run(argsOrString):
+    fn_msg = (" (Python {}'s standard implementation)"
+              "".format(sys.version_info[0]))
+    if hasattr(CompletedProcess, '_custom_impl'):
+        fn_msg = " (Python 2 polyfill)"
+    print("* Testing subprocess.run{} with {}..."
+          "".format(fn_msg, type(argsOrString).__name__))
+    proc = subprocess.run(argsOrString)
+    print("* proc.returncode: {}".format(proc.returncode))
+    print("* proc.stdout: {}".format(proc.stdout))
+    print("* proc.stderr: {}".format(proc.stdout))
 
 
 def toLUID(name):
