@@ -1,5 +1,6 @@
 import setuptools
 import sys
+import os
 # - For the example on which this was based, see
 #   https://github.com/poikilos/pypicolcd/blob/master/setup.py
 # - For nose, see https://github.com/poikilos/mgep/blob/master/setup.py
