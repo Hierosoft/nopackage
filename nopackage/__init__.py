@@ -236,12 +236,15 @@ iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_i
 iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
-iconNames = {}
+
+iconNames = {
+    'godot': "godot",  # since the file is named "app_icon.png"
+    'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
+}
 # ^ A list of icon names where the downloaded file should be renamed.
-iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
-iconNames["ninja-ide"] = "ninja-ide"  # since the file is named "icon.png"
-minimumUniquePartOfLuid = {}
-minimumUniquePartOfLuid["unityhub"] = "unity"
+minimumUniquePartOfLuid = {
+    'unityhub': "unity",
+}
 hyphenate_names = [
     "ninja-ide",
 ]
@@ -308,16 +311,18 @@ for rawLuid, url in iconLinks.items():
                "".format(luid=luid, fileName=fileName, url=url,
                          luidParts=luidParts))
         raise AssertionError(msg)
-casedNames = {}  # A list of correct icon captions indexed by LUID
-casedNames["umlet"] = "UMLet Standalone"  # as opposed to a plugin/web ver
-casedNames["freecad"] = "FreeCAD"
-casedNames["android.studio.ide"] = "Android Studio IDE"
-casedNames["flashprint"] = "FlashPrint"
-casedNames["argouml"] = "ArgoUML"
-casedNames["ninja-ide"] = "Ninja-IDE"
-annotations = {}
-annotations[".deb"] = "deb"
-annotations[".appimage"] = "AppImage"
+casedNames = {  # A list of correct icon captions indexed by LUID
+    'umlet': "UMLet Standalone",  # as opposed to a plugin/web ver
+    'freecad': "FreeCAD",
+    'android.studio.ide': "Android Studio IDE",
+    'flashprint': "FlashPrint",
+    'argouml': "ArgoUML",
+    'ninja-ide': "Ninja-IDE",
+}
+annotations = {  # Add a parenthetical to the shortcut caption.
+    '.deb': "deb",
+    '.appimage': "AppImage",
+}
 
 
 known_binaries = ["RunAwesomeBump.sh"]
@@ -948,8 +953,8 @@ def split_any(s, delimiters, blobs=None):
 
     Keyword arguments:
     blobs -- a list of strings to never split (for example, include
-             'x86_64' as a blob when '_' is in delimiters but you want
-             to not split at '_' in cases where it is in that blob)
+        'x86_64' as a blob when '_' is in delimiters but you want
+        to not split at '_' in cases where it is in that blob)
     '''
     ret = []
     start = 0
@@ -1048,12 +1053,12 @@ def is_version(s, allowLettersAtEnd, allowMore=None):
     '''
     Sequential arguments:
     allowLettersAtEnd -- If True, allow letters (but no more numbers
-                         after the first letter) at the end if starts
-                         with a number (such as for "2.79b").
+        after the first letter) at the end if starts with a number
+        (such as for "2.79b").
 
     Keyword arguments:
     allowMore -- a list such as PackageInfo.VPARTS of entire words to
-                 allow (case-insensive) such as "master" or "dev"
+        allow (case-insensive) such as "master" or "dev"
     '''
     # if s.lower in version_strings:
     if allowMore is not None:
@@ -1523,9 +1528,9 @@ class PackageInfo:
 
         Sequential arguments:
         cls -- Class (Don't specify this--Call
-               PackageInfo.unsplit_version to prepend the class)
+            PackageInfo.unsplit_version to prepend the class)
         TwoOnly -- Combine everything before the version and after the
-                   start of the version.
+            start of the version.
         oldDelimiters -- Add old delimiters back when un-splitting.
         '''
         fn = 'unsplit_version'
@@ -1914,53 +1919,45 @@ def install_program_in_place(src_path, **kwargs):
         file that this program should maintain.
 
     Keyword arguments:
-    casedName --
-    If casedName is not specified, the name and version will be
-    calculated from either the filename at src_path or the path's
-    parent directory's name.
-    Example:
-    src_path = \
-    ../Downloads/blender-2.79-e045fe53f1b0-linux-glibc217-x86_64/blender
-    (In this case, this function will extract the name and version from
-    blender-2.79-e045fe53f1b0-linux-glibc217-x86_64 since it has more
-    delimiters than the filename "blender")
+    casedName -- If casedName is not specified, the name and version
+        will be calculated from either the filename at src_path or the
+        path's parent directory's name.
+        Example:
+        src_path = \
+        ../Downloads/blender-2.79-e045fe53f1b0-linux-glibc217-x86_64/blender
+        (In this case, this function will extract the name and version
+        from blender-2.79-e045fe53f1b0-linux-glibc217-x86_64 since it
+        has more delimiters than the filename "blender")
 
     move_what -- Only set this to 'file' if src_path is an AppImage or
-    other self-contained binary file. Otherwise you may set it to
-    'directory' (or None to move nothing). The file or directory will be
-    moved to ~/.local/lib64/
-    (or whatever programs directory is detected as a parent of the
-    directory if detect_program_parent is True [automaticaly True by
-    calling itself in the case of deb]).
-    move_what='file' example:
-    If name is not specified, the name and version will be calculated
-    from either the filename at src_path or the path's parent
-    directory's name.
-    Example:
-    src_path=(
-    "../Downloads/"
-    "FreeCAD_0.18-16131-Linux-Conda_Py3Qt5_glibc2.12-x86_64.AppImage"
-    )
-    (In this case, this function will extract the name and version from
-    FreeCAD_0.18-16131-Linux-Conda_Py3Qt5_glibc2.12-x86_64.AppImage)
+        other self-contained binary file. Otherwise you may set it to
+        'directory' (or None to move nothing). The file or directory
+        will be moved to ~/.local/lib64/ (or whatever programs
+        directory is detected as a parent of the directory if
+        detect_program_parent is True [automaticaly True by calling
+        itself in the case of deb]). move_what='file' example: If name
+        is not specified, the name and version will be calculated from
+        either the filename at src_path or the path's parent
+        directory's name. Example: src_path=( "../Downloads/"
+        "FreeCAD_0.18-16131-Linux-Conda_Py3Qt5_glibc2.12-x86_64.AppImage"
+        ) (In this case, this function will extract the name and
+        version from
+        FreeCAD_0.18-16131-Linux-Conda_Py3Qt5_glibc2.12-x86_64.AppImage)
 
     multiVersion -- Allow the version to be in the installed directory
-                    name and the icon name so that multiple versions of
-                    the same program (with same luid such as "blender"
-                    or "ultimaker.cura") can be installed at once.
-                    If None, will be set to True if "blender" is the
-                    luid.
+        name and the icon name so that multiple versions of the same
+        program (with same luid such as "blender" or "ultimaker.cura")
+        can be installed at once. If None, will be set to True if
+        "blender" is the luid.
 
-                    Even if false, If the file is an appimage, it can
-                    coexist with other non-appimage installs, since the
-                    non- appimage install will be a directory or
-                    non-appimage binary and since -appimage will be
-                    appended to the icon filename.
+        Even if false, If the file is an appimage, it can coexist with
+        other non-appimage installs, since the non- appimage install
+        will be a directory or non-appimage binary and since -appimage
+        will be appended to the icon filename.
 
     luid -- This is the unique program name without the version, with
-            dots instead of spaces and all lowercase.
-            It is detected automatically from the file or directory name
-            if None.
+        dots instead of spaces and all lowercase. It is detected
+        automatically from the file or directory name if None.
     """
 
     version = kwargs.get("version")
