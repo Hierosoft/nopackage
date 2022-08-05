@@ -480,9 +480,9 @@ def decode_py_val(valueStr, lineN=-1, path="(generated)"):
     '''
     # formerly getValueFromSymbol
     # def getValueFromSymbol(valueStr, lineN=-1, path="(generated)"):
-    valueL = None
-    if valueStr is not None:
-        valueL = valueStr.lower()
+    # valueL = None
+    # if valueStr is not None:
+    #    valueL = valueStr.lower()
     if valueStr == "None":
         return None
     if valueStr == "True":
@@ -491,11 +491,11 @@ def decode_py_val(valueStr, lineN=-1, path="(generated)"):
         return False
     try:
         return int(valueStr)
-    except ValueError as ex:
+    except ValueError:
         pass
     try:
         return float(valueStr)
-    except ValueError as ex:
+    except ValueError:
         pass
     if valueStr.startswith("'") and valueStr.endswith("'"):
         return valueStr[1:-1].replace('\\\'', '\'')
@@ -1228,7 +1228,7 @@ class PackageInfo:
             print("Creating PackageInfo...")
         self.metas = ['casedName', 'luid', 'version',
                       'caption', 'platform', 'arch', 'is_dir']
-        no_error = kwargs.get('no_error') is True
+        # TODO: no_error = kwargs.get('no_error') is True
         self.casedName = kwargs.get('casedName')
         self.luid = kwargs.get("luid")
         # ^ decided by transforming casedName below if None
@@ -1323,8 +1323,6 @@ class PackageInfo:
         self.caption = kwargs.get('caption')
         parts = split_any(fnamePartial, PackageInfo.DELIMITERS,
                           blobs=PackageInfo.ARCHES)
-        part1 = None
-        part2 = None
         archI = -1
         if PackageInfo.verbosity > 0:
             print("* name without extension: {}"
@@ -2140,7 +2138,7 @@ def install_program_in_place(src_path, **kwargs):
             shutil.rmtree(next_temp)
             print("* removed '{}'".format(next_temp))
             return False
-        program_temp = tempfile.mkdtemp()
+        # program_temp = tempfile.mkdtemp()
         program_path = found_programs_paths[0]
         program = os.path.split(found_programs_paths[0])[-1]
         this_programs_path = os.path.split(found_programs_paths[0])[0]
@@ -2304,7 +2302,7 @@ def install_program_in_place(src_path, **kwargs):
     archive_categories = {}
     archive_categories["tar"] = [".tar.bz2", ".tar.gz", ".tar.xz"]
     archive_categories["zip"] = [".zip"]
-    found_ending = None
+    # found_ending = None
     ar_cat = None
     for category, endings in archive_categories.items():
         for ending in endings:
@@ -2312,7 +2310,7 @@ def install_program_in_place(src_path, **kwargs):
                 dirname = src_path[:-(len(ending))]
                 echo1("* generated dirname {} from src_path {}"
                       "".format(dirname, src_path))
-                found_ending = ending
+                # found_ending = ending
                 ar_cat = category
                 pkginfo = PackageInfo(
                     src_path,
@@ -2450,7 +2448,7 @@ def install_program_in_place(src_path, **kwargs):
                 if len(scripts[0]) > len(scripts[1]):
                     short_i = 1
                     long_i = 0
-                sName = scripts[short_i]
+                # TODO: sName = scripts[short_i]
                 lName = scripts[long_i]
                 if lName.startswith(os.path.splitext(lName)):
                     # if has something like argouml.sh and
@@ -2600,7 +2598,7 @@ def install_program_in_place(src_path, **kwargs):
                 elif len(casedName) < len(thisPkg.casedName):
                     print('WARNING: the previously collected name'
                           ' "{}" is shorter than the detected name'
-                          ' "{}" (tries: {})'.format(pkgs))
+                          ' "{}" (tries: {})'.format(casedName, thisPkg.casedName, pkgs))
                     casedName = pkg.casedName
                     if luid is None:
                         if thisPkg.luid is None:
@@ -2637,6 +2635,10 @@ def install_program_in_place(src_path, **kwargs):
             if os.path.isdir(applications):
                 for sub in os.listdir(applications):
                     subPath = os.path.join(applications, sub)
+                    if sub.startswith("."):
+                        continue
+                    if not os.path.isfile(subPath):
+                        continue
                     if sub.startswith(luid+"-"):
                         matches.append(sub)
                         subName = os.path.splitext(sub)[0]
@@ -2824,8 +2826,8 @@ def install_program_in_place(src_path, **kwargs):
     if dirname is not None:
         dst_dirpath = os.path.join(dst_programs, dirname)
         setProgramValue(luid, 'dst_dirpath', dst_dirpath)
-    is_what = None
     '''
+    is_what = None
     if os.path.isfile(dst_path):
         is_what = 'file'
     elif os.path.isfile(src_path):
@@ -3164,7 +3166,8 @@ def install_program_in_place(src_path, **kwargs):
             else:
                 echo0("WARNING: uninstall_shortcut {} does not exist."
                       " The sc_path {} will be used instead."
-                      "".format(encode_py_val(sc_path)))
+                      "".format(encode_py_val(try_sc_path),
+                                encode_py_val(sc_path)))
         logLn("uninstall_shortcut:{}".format(sc_path))
         if os.path.isfile(sc_path):
             print(u_cmd_parts)
@@ -3225,7 +3228,7 @@ def install_program_in_place(src_path, **kwargs):
                 sys.stderr.write("OK\n")
 
             else:
-                print("* installing '{}'...".format(sc_name,
+                print("* installing '{}'...{}".format(sc_name,
                                                     inst_msg))
             print("  Name={}".format(caption))
             print("  Exec={}".format(dst_bin_path))
