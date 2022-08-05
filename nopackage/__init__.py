@@ -162,14 +162,16 @@ def echo0(*args, **kwargs):
 
 def echo1(msg):
     if verbose < 1:
-        return
+        return False
     echo0("[verbose] {}".format(msg))
+    return True
 
 
 def echo2(msg):
     if verbose < 2:
-        return
+        return False
     echo0("[debug] {}".format(msg))
+    return True
 
 
 # region same as linuxpreinstall.ggrep
