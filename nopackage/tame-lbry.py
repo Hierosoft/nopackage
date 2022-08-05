@@ -16,6 +16,6 @@ for proc in psutil.process_iter():
             counts[proc.name()] += 1
         proc.kill()
 
-for k,v in counts.items():
-    print("({}) {}".format(v, k)) 
+for k, v in counts.items():
+    print("({}) {}".format(v, k))
 print("(Finished OK)")

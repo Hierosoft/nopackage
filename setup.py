@@ -71,5 +71,5 @@ setuptools.setup(
     # pip uninstall urllib and pip uninstall urllib2 do nothing)
     test_suite='nose.collector',
     tests_require=['nose', 'nose-cover3'],
-    zip_safe=False, # It can't run zipped due to needing data files.
+    zip_safe=False,  # It can't run zipped due to needing data files.
 )

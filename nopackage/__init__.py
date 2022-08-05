@@ -34,6 +34,18 @@ nopackage --help
 
 '''
 from __future__ import print_function
+import sys
+import stat
+import os
+import shutil
+import tarfile
+import tempfile
+from zipfile import ZipFile
+import platform
+import json
+from datetime import datetime
+import inspect
+import subprocess
 '''
 nopackage tries to install any folder or archived binary package.
 Copyright (C) 2019  Jake "Poikilos" Gustafson
@@ -51,26 +63,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import sys
-import stat
-import os
-import shutil
-import tarfile
-import tempfile
-from zipfile import ZipFile
-import platform
-import json
-from datetime import datetime
-import inspect
+
 
 # region same as hierosoft (Hierosoft Update) and blnk
-python_mr = 3  # major revision
-try:
+python_mr = sys.version_info.major
+if python_mr >= 3:
     import urllib.request
     request = urllib.request
-except:
-    # python2
-    python_mr = 2
+else:
     import urllib2 as urllib
     request = urllib
 '''
@@ -90,7 +90,6 @@ except:
 # from subprocess import CalledProcessError
 # from subprocess import SubprocessError
 
-import subprocess
 python_mr = sys.version_info.major
 if python_mr > 2:  # try:
     # from subprocess import run as sp_run
@@ -133,10 +132,10 @@ else:  # except ImportError:
         process = subprocess.Popen(*popenargs, **kwargs)
         try:
             outs, errs = process.communicate(input)
-        except:
+        except Exception as ex:
             process.kill()
             process.wait()
-            raise
+            raise ex
         returncode = process.poll()
         # print("check: {}".format(check))
         # print("returncode: {}".format(returncode))
@@ -266,6 +265,7 @@ sh_specials = "!\"#$&'()*,;<>?[]\\^`{}|~"
 # (filename expansion with PATH lookup)."
 # -<https://unix.stackexchange.com/a/357932/343286>
 
+
 def sh_literal(v):
     '''
     Convert the value to a bash-ready string.
@@ -316,7 +316,8 @@ me = "nopackage"
 myDir = os.path.dirname(os.path.abspath(__file__))
 repoDir = os.path.dirname(myDir)
 distPath = os.path.join(myDir, "usr")
-distGoodFlag = os.path.join(distPath, "share", "applications", "nopackage.desktop")
+distGoodFlag = os.path.join(distPath, "share", "applications",
+                            "nopackage.desktop")
 if not os.path.isfile(distGoodFlag):
     raise RuntimeError("The file {} is missing. Make sure nopackage is"
                        " installed correctly."
@@ -344,7 +345,8 @@ iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_i
 iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
-iconNames = {}  # A list of icon names where the downloaded file should be renamed.
+iconNames = {}
+# ^ A list of icon names where the downloaded file should be renamed.
 iconNames["godot"] = "godot"  # since the file is named "app_icon.png"
 iconNames["ninja-ide"] = "ninja-ide"  # since the file is named "icon.png"
 minimumUniquePartOfLuid = {}
@@ -426,6 +428,7 @@ Icon={Icon}
 Terminal=false
 Type=Application
 """
+
 
 def format_shortcut(shortcut_data, meta, path=None, add_all=True):
     '''
@@ -758,8 +761,11 @@ def addVersionedValue(luid, version, key, value):
         localMachine['programs'][luid]['versions'][version] = {}
     if localMachine['programs'][luid]['versions'][version].get(key) is None:
         localMachine['programs'][luid]['versions'][version][key] = []
-    if not isinstance(localMachine['programs'][luid]['versions'][version].get(key), list):
-        raise ValueError("You cannot append to non-list (programs.{}.versions.{}.{})."
+    if not isinstance(
+            localMachine['programs'][luid]['versions'][version].get(key), list
+            ):
+        raise ValueError("You cannot append to non-list"
+                         " (programs.{}.versions.{}.{})."
                          "".format(luid, version, key))
     localMachine['programs'][luid]['versions'][version][key].append(value)
     if enableSaveOnWrite:
@@ -806,9 +812,9 @@ def tests():
         print("* [{}] skipped the process return test since"
               " {} does not exist."
               "".format(me, sh_literal(test_return_sh)))
-        #raise RuntimeError("The {} process return test failed since"
-        #                   " {} does not exist."
-        #                   "".format(me, sh_literal(test_return_sh)))
+        # raise RuntimeError("The {} process return test failed since"
+        #                    " {} does not exist."
+        #                    "".format(me, sh_literal(test_return_sh)))
     # else:
     #     print("* The exception test was skipped since you are using"
     #           " Python's implementation of CompletedProcess.")
@@ -1111,6 +1117,7 @@ noAlphaErrorFmt = ('Parsing names with no alphabetic characters'
                    ', fnamePartial:"{}"'
                    ')')
 
+
 class PackageInfo:
     '''
     To get a globally unique name based on whether multiVersion or
@@ -1233,7 +1240,7 @@ class PackageInfo:
                 frameinfo = total_stack[relative_frame][0]
                 # relative_depth = total_depth - relative_frame
                 # func_name = frameinfo.f_code.co_name
-                caller_line         = frameinfo.f_lineno
+                caller_line = frameinfo.f_lineno
                 caller_file = os.path.basename(frameinfo.f_code.co_filename)
                 raise ValueError(msg + " \n{}:{}: should set is_dir."
                                  "".format(caller_file, caller_line))
@@ -1271,7 +1278,7 @@ class PackageInfo:
         while not fnamePartial[startChar].isalpha():
             startChar += 1
             if startChar >= len(fnamePartial):
-                msg =  noAlphaErrorFmt.format(self.fname, fnamePartial)
+                msg = noAlphaErrorFmt.format(self.fname, fnamePartial)
                 echo0(msg)
                 echo0("raw_src_path: {}".format(raw_src_path))
                 echo0("src_path: {}".format(src_path))
@@ -1659,7 +1666,6 @@ def dir_is_empty(folder_path):
     return count < 1
 
 
-
 oldLMP = os.path.join(AppDatas, "install_any", "local_machine.json")
 localMachineMetaPath = os.path.join(myAppData, "local_machine.json")
 oldLP = os.path.join(AppDatas, "install_any", "install_any.log")
@@ -1697,18 +1703,16 @@ giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
 sanitizedDtExampleS = "2021-11-25T12:00:13-0500"
 
 
-
-
 def fillProgramMeta(programMeta):
     pkginfo = None
     if programMeta.get('src_path') is not None:
         pkginfo = PackageInfo(
-            programMeta.get('src_path'), # required
+            programMeta.get('src_path'),  # required
             casedName=programMeta.get('casedName'),
             version=programMeta.get('version'),
             caption=programMeta.get('caption'),
             luid=programMeta.get('luid'),
-            dry_run=True, # prevents ValueError on no file.
+            dry_run=True,  # prevents ValueError on no file.
         )
     else:
         print("WARNING: There is no src_path for {}"
@@ -1834,7 +1838,6 @@ if not os.path.isfile(localMachineMetaPath):
             elif len(thisMeta) > 2:
                 echo0("WARNING: There is no src_path in {}"
                       "".format(thisMeta))
-
 
         # echo0("names: {}".format(names))
         # ^ should match validNames
@@ -2022,7 +2025,7 @@ def install_program_in_place(src_path, **kwargs):
         print("* extracting '{}' to '{}'...".format(src_path, ex_tmp))
         ex_command = "cd '{}' && ar xv '{}'".format(ex_tmp, src_path)
         # NOTE: Instead of `ar`, python-libarchive could also work.
-        cmd_return = os.system(ex_command);
+        cmd_return = os.system(ex_command)
         if dir_is_empty(ex_tmp):
             print("ERROR: `{}` did not result in any extracted files or"
                   " directories in"
@@ -2052,9 +2055,10 @@ def install_program_in_place(src_path, **kwargs):
         except tarfile.ReadError:
             print("ERROR: tar could not extract '{}'".format(next_path))
             return False
-        shutil.rmtree(ex_tmp)  # Remove temporary directory containing
-                               # only control.tar.gz, data.tar.xz, and
-                               # debian-binary.
+        shutil.rmtree(ex_tmp)
+        # ^ Remove temporary directory containing only control.tar.gz,
+        #   data.tar.xz, and debian-binary.
+
         # Now next_temp should contain directories such as usr & etc.
         src_usr = os.path.join(next_temp, "usr")
         src_opt = os.path.join(next_temp, "opt")
@@ -2084,8 +2088,9 @@ def install_program_in_place(src_path, **kwargs):
                     if sub_name not in not_programs:
                         found_programs_paths.append(sub_path)
         if len(found_programs_paths) == 0:
-            print("ERROR: extracting '{}' from '{}' did not result in"
-                  " any programs in any known directories:".format(
+            print(
+                "ERROR: extracting '{}' from '{}' did not result in"
+                " any programs in any known directories:".format(
                     next_temp,
                     next_path,
                 )
@@ -2099,8 +2104,9 @@ def install_program_in_place(src_path, **kwargs):
             print("* removed '{}'".format(next_temp))
             return False
         elif len(found_programs_paths) > 1:
-            print("ERROR: extracting '{}' from '{}' resulted in"
-                  " too many unknown directories in '{}': ({})".format(
+            print(
+                "ERROR: extracting '{}' from '{}' resulted in"
+                " too many unknown directories in '{}': ({})".format(
                     next_temp,
                     next_path,
                     try_programs_paths,
@@ -2127,7 +2133,6 @@ def install_program_in_place(src_path, **kwargs):
             print("")
             raise RuntimeError("{} did not complete.".format(verb))
 
-
         binaries = []
         binary_path = None
         folder_path = program_path
@@ -2153,9 +2158,10 @@ def install_program_in_place(src_path, **kwargs):
             else:
                 shutil.rmtree(next_temp)
                 if len(binaries) == 0:
-                    print("ERROR: extracting '{}' from '{}' did not"
-                          " result in any files such as binaries in"
-                          " '{}' (only {})".format(
+                    print(
+                        "ERROR: extracting '{}' from '{}' did not"
+                        " result in any files such as binaries in"
+                        " '{}' (only {})".format(
                             next_temp,
                             next_path,
                             program_path,
@@ -2163,10 +2169,11 @@ def install_program_in_place(src_path, **kwargs):
                         )
                     )
                 else:
-                    print("ERROR: extracting '{}' from '{}'"
-                          " resulted in more than one file in"
-                          " '{}' and one is not named {}, so the binary"
-                          " could not be detected (among {})".format(
+                    print(
+                        "ERROR: extracting '{}' from '{}'"
+                        " resulted in more than one file in"
+                        " '{}' and one is not named {}, so the binary"
+                        " could not be detected (among {})".format(
                             next_temp,
                             next_path,
                             program_path,
@@ -2326,7 +2333,7 @@ def install_program_in_place(src_path, **kwargs):
         folder_path = ex_tmp
         for sub_name in os.listdir(folder_path):
             sub_path = os.path.join(folder_path, sub_name)
-            if os.path.isfile(sub_path):  #sub_name[:1]!="." and
+            if os.path.isfile(sub_path):  # sub_name[:1]!="." and
                 sub_files.append(sub_path)
             elif os.path.isdir(sub_path):
                 sub_dirs.append(sub_path)
@@ -2446,8 +2453,6 @@ def install_program_in_place(src_path, **kwargs):
                 #     print("  - There is only {} script.")
                 return False
 
-
-
     if src_path is None:
         usage()
         echo0("")
@@ -2546,7 +2551,7 @@ def install_program_in_place(src_path, **kwargs):
                 do_uninstall=do_uninstall,
             )
             pkgs.append(thisPkg)
-            if thisPkg.version != None:
+            if thisPkg.version is not None:
                 break
             '''
             except ValueError as ex:
@@ -2569,9 +2574,9 @@ def install_program_in_place(src_path, **kwargs):
                 if casedName is None:
                     casedName = pkg.casedName
                 elif len(casedName) < len(thisPkg.casedName):
-                    print("WARNING: the previously collected name"
-                          " \"{}\ is shorter than the detected name"
-                          " \"{}\" (tries: {})".format(pkgs))
+                    print('WARNING: the previously collected name'
+                          ' "{}" is shorter than the detected name'
+                          ' "{}" (tries: {})'.format(pkgs))
                     casedName = pkg.casedName
                     if luid is None:
                         if thisPkg.luid is None:
@@ -2809,7 +2814,6 @@ def install_program_in_place(src_path, **kwargs):
         if move_what not in ['file', 'directory']:
     '''
 
-
     if move_what == 'file':
         dst_path = os.path.join(dst_programs, filename)
         setProgramValue(luid, 'dst_path', dst_path)
@@ -2978,7 +2982,7 @@ def install_program_in_place(src_path, **kwargs):
                          "".format(dst_path))
         sys.stderr.flush()
         os.chmod(dst_path, stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
-                       | stat.S_IROTH | stat.S_IXOTH)
+                 | stat.S_IROTH | stat.S_IXOTH)
         sys.stderr.write("OK\n")
         sys.stderr.flush()
         # stat.S_IRWXU : Read, write, and execute by owner
@@ -3176,8 +3180,8 @@ def install_program_in_place(src_path, **kwargs):
                 # ^ using only the name also works: sc_name])
                 # ^ uninstall ensures that the name updates if existed
             install_proc = subprocess.run([desktop_installer,
-                                          "install", "--novendor",
-                                          tmp_sc_path])
+                                           "install", "--novendor",
+                                           tmp_sc_path])
             inst_msg = "OK"
             # print("sp_run's returned process {} has {}"
             #       "".format(install_proc, dir(install_proc)))
@@ -3225,7 +3229,7 @@ def main():
         print(noCmdMsg)
         print("")
         print("")
-        exit(1)
+        return 1
     do_uninstall = False
     enable_reinstall = False
     move_what = None
@@ -3247,14 +3251,14 @@ def main():
                 multiVersion = True
             elif arg == "--help":
                 usage()
-                exit(0)
+                return 0
             elif arg == "--verbose":
                 verbose = 1
             elif arg == "--debug":
                 verbose = 2
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
-                exit(1)
+                return 1
         elif valueParamsKey is not None:
             valueParams[valueParamsKey] = arg
             valueParamsKey = None
@@ -3265,11 +3269,11 @@ def main():
                 caption = arg
             else:
                 print("A 3rd parameter is unexpected: '{}'".format(arg))
-                exit(1)
+                return 1
     if src_path is None:
         echo0("")
         echo0("Error: You must specify a source path.")
-        exit(1)
+        return 1
     src_path = os.path.abspath(src_path)
     if move_what == 'any':
         if os.path.isdir(src_path):
@@ -3280,12 +3284,11 @@ def main():
             move_what = 'file'
         else:
             print("{} is not a file nor a directory.".format(src_path))
-            exit(1)
-
+            return 1
 
     parts = src_path.split('.')
     if parts[-1] == "AppImage":
-        move_what='file'
+        move_what = 'file'
     version = valueParams.get('version')
     try:
         install_program_in_place(
@@ -3303,6 +3306,7 @@ def main():
             return 1
         else:
             raise ex
+    return 0
 
 
 if __name__ == "__main__":
