@@ -240,9 +240,11 @@ iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_
 #    cd Printrun && git pull && cd .. && python3 -m pip install --user --upgrade Printrun
 iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.png"
 iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"
+iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.png"
 if platform.system() == "Windows":
     iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"
     iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"
+    iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.ico"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
 
 iconNames = {
@@ -304,6 +306,14 @@ shortcutMetas = {
         'Comment': "Controls your 3D printer form console",
         'StartupNotify': "true",
         'Terminal': "true",
+        'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
+    },
+    'pronsole': {
+        # See <https://github.com/kliment/Printrun/blob/master/
+        #   plater.desktop>
+        'GenericName': "Printer building tool",
+        'Comment': "Prepares plates for 3D printing",
+        'StartupNotify': "true",
         'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
     },
 }
