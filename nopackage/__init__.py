@@ -235,6 +235,14 @@ iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
 iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
 iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
 iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
+# pronterface.py and pronsole.py are installed to bin by pip via
+#    mkdir -p cd ~/Downloads/git/kliment && cd ~/Downloads/git/kliment && git clone https://github.com/kliment/Printrun
+#    cd Printrun && git pull && cd .. && python3 -m pip install --user --upgrade Printrun
+iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.png"
+iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"
+if platform.system() == "Windows":
+    iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"
+    iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
 
 iconNames = {
@@ -279,6 +287,24 @@ shortcutMetas = {
     'unityhub': {
         'Keywords': "Development;IDE;",
         'Categories': "Development;IDE;",
+    },
+    'pronterface': {
+        # See <https://github.com/kliment/Printrun/blob/master/
+        #   pronterface.desktop>
+        'GenericName': "Printer Interface",
+        'Comment': "Controls your 3D printer",
+        'StartupNotify': "true",
+        'Categories': "GNOME;GTK;Utility;Graphics;3DGraphics;",
+        'Mimetype': "MimeType=application/sla;model/x.stl-binary;model/x.stl-ascii;text/x.gcode;",
+    },
+    'pronsole': {
+        # See <https://github.com/kliment/Printrun/blob/master/
+        #   pronsole.desktop>
+        'GenericName': "Printer console",
+        'Comment': "Controls your 3D printer form console",
+        'StartupNotify': "true",
+        'Terminal': "true",
+        'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
     },
 }
 
@@ -1977,6 +2003,7 @@ def install_program_in_place(src_path, **kwargs):
     icon_path = kwargs.get("icon_path")
     print("* icon_path was set to: {}".format(icon_path))
     move_what = kwargs.get("move_what")
+    print("move_what: {}".format(move_what))
     pull_back = kwargs.get("pull_back")
 
     enable_force_script = False
@@ -2878,6 +2905,13 @@ def install_program_in_place(src_path, **kwargs):
                   " correct.".format(encode_py_val(dst_dirpath)))
 
     echo1("move_what: {}".format(encode_py_val(move_what)))
+    '''
+    raise NotImplementedError(
+        'move_what None should mean to not move the file (check this'
+        ' then comment this). move_what="{}"'.format(move_what)
+    )
+    '''
+
     if not do_uninstall:
         if not multiVersion:
             setProgramValue(luid, 'move_what', move_what)
