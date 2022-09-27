@@ -241,15 +241,20 @@ iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_
 iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.png"
 iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"
 iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.png"
+iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.png"
 if platform.system() == "Windows":
     iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"
     iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"
     iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.ico"
+    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.ico"
+elif platform.system() == "Darwin":
+    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.icns"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
+    'balenaetcher': "balenaetcher",  # since the file is named "icon.png"
 }
 # ^ A list of icon names where the downloaded file should be renamed.
 minimumUniquePartOfLuid = {
