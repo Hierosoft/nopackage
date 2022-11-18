@@ -45,7 +45,7 @@ import platform
 import json
 from datetime import datetime
 import inspect
-import subprocess
+
 '''
 nopackage tries to install any folder or archived binary package.
 Copyright (C) 2019  Jake "Poikilos" Gustafson
@@ -64,149 +64,42 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+from nopackage.find_hierosoft import hierosoft
 
-# region same as hierosoft (Hierosoft Update) and blnk
-if sys.version_info.major >= 3:
-    import urllib.request
-    request = urllib.request
-else:
-    import urllib2 as urllib
-    request = urllib
-'''
-    class SubprocessError(Exception):
-        pass
+from hierosoft.moreweb import (
+    request,
+)
 
+from hierosoft import (
+    CompletedProcess,
+    subprocess,
+    echo0,
+    echo1,
+    echo2,
+    get_unique_path,
+    PREFIX,  # ~/.local, formerly defined here and named PREFIX
+)
 
-    class CalledProcessError(SubprocessError):
-        def __init__(self, returncode, cmd, output=None):
-            self.returncode = returncode
-            self.cmd = cmd
-            self.output = output
-            self.stdout = None
-            self.stderr = None
-        # commented since same in Python 2 & 3
-'''
-# from subprocess import CalledProcessError
-# from subprocess import SubprocessError
+from hierosoft.ggrep import (
+    contains_any,
+)
 
-if sys.version_info.major >= 3:
-    # from subprocess import run as sp_run
-    from subprocess import CompletedProcess
-else:
-    # This class is not in Python 2, so create a substitute.
-    class CompletedProcess:
-        _custom_impl = True
+share_path = os.path.join(PREFIX, "share")
+icons_path = os.path.join(share_path, "pixmaps")
+lib64 = os.path.join(PREFIX, "lib64")
+lib = os.path.join(PREFIX, "lib")
 
-        def __init__(self, args, returncode, stdout=None, stderr=None):
-            self.args = args
-            self.returncode = returncode
-            self.stdout = stdout
-            self.stderr = stderr
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
-        def check_returncode(self):
-            if self.returncode != 0:
-                err = subprocess.CalledProcessError(self.returncode,
-                                                    self.args,
-                                                    output=self.stdout)
-                raise err
-            return self.returncode
-
-    def sp_run(*popenargs, **kwargs):
-        '''
-        CC BY-SA 4.0
-        by Martijn Pieters
-        https://stackoverflow.com/a/40590445
-        and Poikilos
-        '''
-        input = kwargs.pop("input", None)
-        check = kwargs.pop("handle", False)
-
-        if input is not None:
-            if 'stdin' in kwargs:
-                raise ValueError('stdin and input arguments may not '
-                                 'both be used.')
-            kwargs['stdin'] = subprocess.PIPE
-
-        process = subprocess.Popen(*popenargs, **kwargs)
-        try:
-            outs, errs = process.communicate(input)
-        except Exception as ex:
-            process.kill()
-            process.wait()
-            raise ex
-        returncode = process.poll()
-        # print("check: {}".format(check))
-        # print("returncode: {}".format(returncode))
-        if check and returncode:
-            raise subprocess.CalledProcessError(returncode, popenargs,
-                                                output=outs)
-        return CompletedProcess(popenargs, returncode, stdout=outs,
-                                stderr=errs)
-    subprocess.run = sp_run
-
-
-verbose = False
-
-for argI in range(1, len(sys.argv)):
-    arg = sys.argv[argI]
-    if arg.startswith("--"):
-        if arg == "--verbose":
-            verbose = 1
-        elif arg == "--debug":
-            verbose = 2
-
-
-def echo0(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
-def echo1(msg):
-    if verbose < 1:
-        return False
-    echo0("[verbose] {}".format(msg))
-    return True
-
-
-def echo2(msg):
-    if verbose < 2:
-        return False
-    echo0("[debug] {}".format(msg))
-    return True
-
-
-my_dir = os.path.dirname(os.path.realpath(__file__))
-
-profile = os.environ.get("HOME")
-if platform.system() == "Windows":
-    profile = os.environ.get("USERPROFILE")
-    AppDatas = os.path.join(profile, "AppData", "Local")
-    if not os.path.isdir(AppDatas):
-        raise RuntimeError("USERPROFILE {} is used (since HOME is"
-                           "not defined), but there is no {}"
-                           "".format(profile, AppDatas))
-    myAppData = os.path.join(AppDatas, "nopackage")
-else:
-    AppDatas = os.path.join(profile, ".config")
-    myAppData = os.path.join(AppDatas, "nopackage")
-    local_path = os.path.join(profile, ".local")
-    share_path = os.path.join(local_path, "share")
-    icons_path = os.path.join(share_path, "pixmaps")
-    # TODO: use "Application Support" directory on darwin.
-if not os.path.isdir(myAppData):
-    os.makedirs(myAppData)
-lib64 = os.path.join(local_path, "lib64")
-lib = os.path.join(local_path, "lib")
-# endregion same as hierosoft (Hierosoft Update) and blnk
-
-meta_dir = os.path.join(my_dir, "shortcut-metadata")
+meta_dir = os.path.join(MODULE_DIR, "shortcut-metadata")
 
 digits = "0123456789"
 # me = os.path.split(sys.argv[0])[-1]
 # ^ doesn't work correctly if used as a module
 me = "nopackage"
-myDir = os.path.dirname(os.path.abspath(__file__))
-repoDir = os.path.dirname(myDir)
-distPath = os.path.join(myDir, "usr")
+
+repoDir = os.path.dirname(MODULE_DIR)
+distPath = os.path.join(MODULE_DIR, "usr")
 distGoodFlag = os.path.join(distPath, "share", "applications",
                             "nopackage.desktop")
 if not os.path.isfile(distGoodFlag):
@@ -797,27 +690,7 @@ def any_contains(haystacks, needle, allow_blank=False, quiet=False,
     return False
 
 
-def contains_any(haystack, needles, allow_blank=False, quiet=False,
-                 case_sensitive=True):
-    '''
-    Check whether the haystack contains any of the needles.
-    For documentation of keyword arguments, see the "contains" function.
 
-    Returns:
-    bool -- Any needle is in the haystack.
-    '''
-    if not case_sensitive:
-        needle = haystack.lower()
-    for rawN in needles:
-        needle = rawN
-        if not case_sensitive:
-            needle = rawN.lower()
-        # Passing case_sensitive isn't necessary since lower()
-        # is already one in that case above:
-        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
-            echo1("is_in_any: {} is in {}".format(needle, haystack))
-            return True
-    return False
 
 
 # endregion same as pycodetool.ggrep
@@ -1736,11 +1609,18 @@ def dir_is_empty(folder_path):
         count += 1
     return count < 1
 
+OLD_CONFS = get_unique_path("install_any", "Configs:Unique")
+MY_CONFS = get_unique_path("nopackage", "Configs:Unique")  # formerly myAppData
+if not os.path.isdir(MY_CONFS):
+    os.makedirs(MY_CONFS)
 
-oldLMP = os.path.join(AppDatas, "install_any", "local_machine.json")
-localMachineMetaPath = os.path.join(myAppData, "local_machine.json")
-oldLP = os.path.join(AppDatas, "install_any", "install_any.log")
-logPath = os.path.join(myAppData, "nopackage.log")
+oldLMP = os.path.join(OLD_CONFS, "local_machine.json")
+localMachineMetaPath = os.path.join(MY_CONFS, "local_machine.json")
+oldLP = os.path.join(OLD_CONFS, "install_any.log")
+logPath = os.path.join(MY_CONFS, "nopackage.log")
+icons_path
+
+echo0('[nopackage] logPath="{}"'.format(logPath))
 
 if os.path.isfile(oldLMP):
     if not os.path.isfile(localMachineMetaPath):
@@ -2185,10 +2065,10 @@ def install_program_in_place(src_path, **kwargs):
         program = os.path.split(found_programs_paths[0])[-1]
         this_programs_path = os.path.split(found_programs_paths[0])[0]
         this_programs = os.path.split(this_programs_path)[-1]
-        dst_programs = os.path.join(local_path, this_programs)
+        dst_programs = os.path.join(PREFIX, this_programs)
         print("* found programs path in deb: '{}'".format(dst_programs))
 
-        if dst_programs == local_path:
+        if dst_programs == PREFIX:
             print("ERROR: source programs directory (directory"
                   " containing {}) was not"
                   " detected in deb.".format(program_path))
@@ -2559,8 +2439,8 @@ def install_program_in_place(src_path, **kwargs):
     if detect_program_parent:
         this_programs_path = os.path.split(dirpath)[0]
         this_programs = os.path.split(this_programs_path)[-1]
-        dst_programs = os.path.join(local_path, this_programs)
-        if dst_programs == local_path:
+        dst_programs = os.path.join(PREFIX, this_programs)
+        if dst_programs == PREFIX:
             print("ERROR: source programs directory (directory"
                   " containing {}) was not"
                   " detected.".format(src_path))
@@ -3298,7 +3178,7 @@ def main():
     print("")
     caption = None
     src_path = None
-    global verbose
+    global verbosity
     if len(sys.argv) < 2:
         usage()
         print("")
@@ -3329,9 +3209,9 @@ def main():
                 usage()
                 return 0
             elif arg == "--verbose":
-                verbose = 1
+                verbosity = 1
             elif arg == "--debug":
-                verbose = 2
+                verbosity = 2
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
                 return 1
