@@ -77,15 +77,17 @@ from hierosoft import (
     echo1,
     echo2,
     get_unique_path,
-    PREFIX,  # ~/.local, formerly defined here and named PREFIX
+    PREFIX,  # ~/.local, formerly defined below and named PREFIX
+    SHARE, # formerly defined below and called share_path
+    PIXMAPS, # formerly defined below and named PIXMAPS
 )
 
 from hierosoft.ggrep import (
     contains_any,
+    any_contains,
+    contains,
 )
 
-share_path = os.path.join(PREFIX, "share")
-icons_path = os.path.join(share_path, "pixmaps")
 lib64 = os.path.join(PREFIX, "lib64")
 lib = os.path.join(PREFIX, "lib")
 
@@ -627,73 +629,6 @@ def addVersionedValue(luid, version, key, value):
     if enableSaveOnWrite:
         saveLocalMachine()
 '''
-
-
-# region same as pycodetool.ggrep
-
-
-def contains(haystack, needle, allow_blank=False, quiet=False):
-    '''
-    Check if the substring "needle" is in haystack. The behavior differs
-    from the Python "in" command according to the arguments described
-    below.
-
-    Sequential arguments:
-    haystack -- a string to look in
-    needle -- a string for which to look
-    allow_blank -- Instead of raising an exception on a blank needle,
-        return False and show a warning (unless quiet).
-    quiet -- Do not report errors to stderr.
-
-    Raises:
-    ValueError -- If allow_blank is not True, a blank needle will raise
-        a ValueError, otherwise there will simply be a False return.
-    TypeError -- If no other error occurs, the "in" command will raise
-        "TypeError: argument of type 'NoneType' is not iterable" if
-        haystack is None (or haystack and needle are None), or
-        "TypeError: 'in <string>' requires string as left operand, not
-        NoneType" it needle is None.
-    '''
-    if len(needle) == 0:
-        if not allow_blank:
-            raise ValueError(
-                'The needle can\'t be blank or it would match all.'
-                ' Set to "*" to match all explicitly.'
-            )
-        else:
-            if not quiet:
-                echo0("The needle is blank so the match will be False.")
-        return False
-    return needle in haystack
-
-
-def any_contains(haystacks, needle, allow_blank=False, quiet=False,
-                 case_sensitive=True):
-    '''
-    Check whether any haystack contains the needle.
-    For documentation of keyword arguments, see the "contains" function.
-
-    Returns:
-    bool -- The needle is in any haystack.
-    '''
-    if not case_sensitive:
-        needle = needle.lower()
-    for rawH in haystacks:
-        haystack = rawH
-        if not case_sensitive:
-            haystack = rawH.lower()
-        # Passing case_sensitive isn't necessary since lower()
-        # is already one in that case above:
-        if contains(haystack, needle, allow_blank=allow_blank, quiet=quiet):
-            echo1("is_in_any: {} is in {}".format(needle, haystack))
-            return True
-    return False
-
-
-
-
-
-# endregion same as pycodetool.ggrep
 
 
 sh_specials = "!\"#$&'()*,;<>?[]\\^`{}|~"
@@ -1618,7 +1553,7 @@ oldLMP = os.path.join(OLD_CONFS, "local_machine.json")
 localMachineMetaPath = os.path.join(MY_CONFS, "local_machine.json")
 oldLP = os.path.join(OLD_CONFS, "install_any.log")
 logPath = os.path.join(MY_CONFS, "nopackage.log")
-icons_path
+PIXMAPS
 
 echo0('[nopackage] logPath="{}"'.format(logPath))
 
@@ -2135,15 +2070,15 @@ def install_program_in_place(src_path, **kwargs):
             for root, dirs, files in os.walk(src_icons):
                 for sub_name in files:
                     sub_path = os.path.join(root, sub_name)
-                    icon_path = os.path.join(icons_path, sub_name)
+                    icon_path = os.path.join(PIXMAPS, sub_name)
                     addProgramValue(luid, 'icon_paths', icon_path)
                     if do_uninstall:
                         if os.path.isfile(icon_path):
                             os.remove(icon_path)
                             print("* removed '{}'".format(icon_path))
                     else:
-                        if not os.path.isdir(icons_path):
-                            os.makedirs(icons_path)
+                        if not os.path.isdir(PIXMAPS):
+                            os.makedirs(PIXMAPS)
                         try:
                             shutil.move(sub_path, icon_path)
                             print("* added '{}'".format(icon_path))
@@ -2161,7 +2096,7 @@ def install_program_in_place(src_path, **kwargs):
             if do_uninstall:
                 for root, dirs, files in os.walk(src_icons):
                     for sub_name in dirs:
-                        sub_path = os.path.join(icons_path, sub_name)
+                        sub_path = os.path.join(PIXMAPS, sub_name)
                         if not os.path.isdir(sub_path):
                             print("* WARNING: '{}' is already not"
                                   " present.".format(sub_path))
@@ -2465,7 +2400,7 @@ def install_program_in_place(src_path, **kwargs):
           "".format(dirname))
 
     # luid = None
-    applications = os.path.join(share_path, "applications")
+    applications = os.path.join(SHARE, "applications")
     if (casedName is None) or (version is None):
         echo1("* casedName:{} version:{} () so detecting..."
               "".format(casedName, version))
@@ -2662,7 +2597,7 @@ def install_program_in_place(src_path, **kwargs):
     if icon_path is None:
         if os.path.isfile(try_included_icon):
             icon_name = os.path.split(try_included_icon)[1]
-            icon_path = os.path.join(icons_path, icon_name)
+            icon_path = os.path.join(PIXMAPS, icon_name)
             print('* copying "{}" to "{}"'
                   ''.format(try_included_icon, icon_path))
             shutil.copy(try_included_icon, icon_path)
@@ -2672,10 +2607,10 @@ def install_program_in_place(src_path, **kwargs):
             if icon_partial_name is not None:
                 icon_ext = os.path.splitext(icon_name)[-1]
                 icon_name = icon_partial_name + icon_ext
-            icon_path = os.path.join(icons_path, icon_name)
+            icon_path = os.path.join(PIXMAPS, icon_name)
             if not do_uninstall:
-                if not os.path.isdir(icons_path):
-                    os.makedirs(icons_path)
+                if not os.path.isdir(PIXMAPS):
+                    os.makedirs(PIXMAPS)
                 if os.path.isfile(icon_path):
                     if os.stat(icon_path).st_size == 0:
                         print("* removing bad 0-size icon \"{}\""
