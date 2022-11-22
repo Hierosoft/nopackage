@@ -68,6 +68,7 @@ from nopackage.find_hierosoft import hierosoft
 
 from hierosoft.moreweb import (
     request,
+    download,
 )
 
 from hierosoft import (
@@ -967,30 +968,6 @@ def dl_done(evt):
         print("  DONE")
     else:
         print(err)
-
-
-def download(file_path, url, cb_progress=None, cb_done=None,
-             chunk_len=16*1024):
-    '''
-    Download a file in binary mode (based on download from
-    LinkManager from blendernightly).
-    '''
-    response = request.urlopen(url)
-    evt = {}
-    evt['loaded'] = 0
-    # evt['total'] is not implemented (would be from contentlength
-    # aka content-length)
-    with open(file_path, 'wb') as f:
-        while True:
-            chunk = response.read(chunk_len)
-            if not chunk:
-                break
-            evt['loaded'] += chunk_len
-            if cb_progress is not None:
-                cb_progress(evt)
-            f.write(chunk)
-    if cb_done is not None:
-        cb_done(evt)
 
 
 noAlphaErrorFmt = ('Parsing names with no alphabetic characters'
@@ -2619,9 +2596,14 @@ def install_program_in_place(src_path, **kwargs):
                 if not os.path.isfile(icon_path):
                     print("* downloading \"{}\" to \"{}\"..."
                           "".format(try_icon_url, icon_path))
-                    download(icon_path, try_icon_url,
-                             cb_progress=dl_progress,
-                             cb_done=dl_done)
+                with open(icon_path, 'wb') as f:
+                    download(
+                        f,
+                        try_icon_url,
+                        cb_progress=dl_progress,
+                        cb_done=dl_done,
+                        # evt={'total_size': },
+                    )
                 else:
                     print("* \"{}\" already exists (skipping download)"
                           "".format(icon_path))
