@@ -219,7 +219,7 @@ shortcutMetas = {
     },
 }
 
-
+luid = None
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
@@ -248,6 +248,7 @@ for rawLuid, url in iconLinks.items():
                "".format(luid=luid, fileName=fileName, url=url,
                          luidParts=luidParts))
         raise AssertionError(msg)
+del luid
 casedNames = {  # A list of correct icon captions indexed by LUID
     'umlet': "UMLet Standalone",  # as opposed to a plugin/web ver
     'freecad': "FreeCAD",
@@ -365,6 +366,29 @@ def format_shortcut(shortcut_data, meta, path=None, add_all=True):
                 marks[name] = True
     return result
 
+LUID_IS_FINALIZED = False
+LUID = None
+
+def finalize_luid():
+    global LUID_IS_FINALIZED
+    LUID_IS_FINALIZED = True
+
+def unfinalize_luid():
+    global LUID_IS_FINALIZED
+    LUID_IS_FINALIZED = False
+
+def set_luid(luid):
+    global LUID
+    LUID = luid
+
+def luid_finalized():
+    return LUID_IS_FINALIZED
+
+def get_luid():
+    if not luid_finalized():
+        echo0("Warning: luid {} was accessed before finalized."
+              " That means it may be ambiguous and not calculated fully.")
+    return LUID
 
 def getProgramIDs():
     results = []
@@ -470,6 +494,10 @@ def setDeepValue(category, luid, key, value):
 
 
 def setProgramValue(luid, key, value):
+    if not luid_finalized():
+        raise RuntimeError(
+            "A key for luid {} was attempted to be set before finalized."
+            "".format(luid))
     setDeepValue('programs', luid, key, value)
 
 
@@ -486,7 +514,7 @@ def setPackageValue(sc_name, key, value):
     setDeepValue('packages', sc_name, key, value)
 
 
-def getDeepValue(category, luid, key):
+def getDeepValue(category, luid, key, delete=False):
     if localMachine.get(category) is None:
         return None
     if localMachine[category].get(luid) is None:
@@ -498,12 +526,42 @@ def getDeepValue(category, luid, key):
                          " getDeepValue. Use getDeepValues or something"
                          "like {} (plural) instead."
                          "".format(category, luid, key, newCallName))
-    return localMachine[category][luid].get(key)
+    if not delete:
+        return localMachine[category][luid].get(key)
+    value = None
+    if key in localMachine[category][luid]:
+        value = localMachine[category][luid][key]
+        del localMachine[category][luid][key]
+        if enableSaveOnWrite:
+            saveLocalMachine()
+    return value
 
 
-def getProgramValue(luid, key):
-    return getDeepValue('programs', luid, key)
+def deleteDeepValue(category, luid, key):
+    return getDeepValue(category, luid, key, delete=True)
 
+
+def getProgramValue(luid, key, force=False, delete=False):
+    '''
+    Keyword arguments:
+    force -- Only set this to true if caller type is PackageInfo and a
+        temporary theoretical PackageInfo is being created. It should
+        normally be False to block access when the luid is uncertain.
+    delete -- Also delete the value.
+    '''
+    if not luid_finalized():
+        msg = ("A key for luid {} was attempted to be set before finalized."
+                "".format(luid))
+        if True: # not force:
+            raise RuntimeError(msg)
+        else:
+            echo0("Warning (force={}, but Making temp PackageInfo"
+                  " should probably be factored out): {}"
+                  "".format(force, msg))
+    return getDeepValue('programs', luid, key, delete=delete)
+
+def deleteProgramValue(luid, key, force=False):
+    return getProgramValue(luid, key, force=force, delete=True)
 
 def getDeepValues(category, luid, key):
     if localMachine.get(category) is None:
@@ -1105,8 +1163,8 @@ class PackageInfo:
             is_dir = os.path.isdir(src_path)
         self.is_dir = is_dir
         if not do_uninstall:
-            if self.is_dir is not None:
-                was_dir = getProgramValue(luid, 'is_dir')
+            if (self.is_dir is not None) and (self.luid is not None):
+                was_dir = getProgramValue(self.luid, 'is_dir', force=True)
                 if was_dir is True:
                     '''
                     It is possible that a previous PackageInfo was
@@ -1122,7 +1180,7 @@ class PackageInfo:
                           "".format(self.is_dir))
                 else:
                     print("* is_dir: {}".format(self.is_dir))
-                    setProgramValue(luid, 'is_dir', self.is_dir)
+                    setProgramValue(self.luid, 'is_dir', self.is_dir)
         removeExt = kwargs.get('removeExt')
         if removeExt is None:
             removeExt = not is_dir
@@ -1790,7 +1848,7 @@ def install_program_in_place(src_path, **kwargs):
         dots instead of spaces and all lowercase. It is detected
         automatically from the file or directory name if None.
     """
-
+    unfinalize_luid()
     version = kwargs.get("version")
     if version is not None:
         print("- version: {}".format(version))
@@ -1839,6 +1897,7 @@ def install_program_in_place(src_path, **kwargs):
               "".format(knownMeta['luid'], localMachineMetaPath))
         luid = knownMeta.get('luid')
         src_path = knownMeta.get('src_path')
+        echo1("src_path:{}".format(src_path))
         # ^ In case src_path is a luid, change src_path to the real one.
         if src_path is None:
             raise ValueError("There is an error in {}: The src_path is"
@@ -1857,7 +1916,7 @@ def install_program_in_place(src_path, **kwargs):
             if knownMeta.get('caption') is not None:
                 caption = knownMeta.get('caption')
     else:
-        print("* generating new metadata for potential luid '{}'"
+        echo0("* generating new metadata for potential luid '{}'"
               "".format(tryLuid))
 
     if src_path.lower().endswith(".appimage"):
@@ -2107,6 +2166,8 @@ def install_program_in_place(src_path, **kwargs):
             caption = pkginfo.caption
         if luid is None:
             luid = pkginfo.luid
+        # ^ luid may be changed again is multiversion or other reasons.
+        #   Don't use it before the finalize_luid() call.
         suffix = pkginfo.suffix
         # ^ Get the info now, because the extracted directory name will
         #   not contain the version.
@@ -2378,7 +2439,9 @@ def install_program_in_place(src_path, **kwargs):
 
     # luid = None
     applications = os.path.join(SHARE, "applications")
+    retetected_version_used = False
     if (casedName is None) or (version is None):
+        retetected_version_used = True
         echo1("* casedName:{} version:{} () so detecting..."
               "".format(casedName, version))
         # try_names = [filename, dirname]
@@ -2395,7 +2458,7 @@ def install_program_in_place(src_path, **kwargs):
               "".format(try_sources))
         for try_src_i in range(len(try_sources)):
             try_source = try_sources[try_src_i]
-            print("[install_program_in_place] * try_sources[{}] {}"
+            echo0("[install_program_in_place] * try_sources[{}] {}"
                   "".format(try_src_i, try_source))
             # try:
             thisPkg = PackageInfo(
@@ -2450,10 +2513,11 @@ def install_program_in_place(src_path, **kwargs):
             if thisPkg.luid is not None:
                 if luid is None:
                     luid = thisPkg.luid
-    else:
+    if not retetected_version_used:
         print("* The known casedName is \"{}\"".format(casedName))
         print("* The known version is \"{}\"".format(version))
         print("* The known luid is \"{}\"".format(luid))
+        '''
         suffix_msg = "The icon filename suffix was explicitly"
         if (suffix is None) or (len(suffix) < 1):
             suffix = getProgramValue(luid, "suffix")
@@ -2490,8 +2554,10 @@ def install_program_in_place(src_path, **kwargs):
         else:
             print("* {} {}"
                   "".format(suffix_msg, encode_py_val(suffix)))
+        '''
     sc_path = None
     sc_name = None
+
     old_sc_name = None
     old_sc_name_msg = " (legacy name before git 2021-02-25)"
     if luid == "blender":
@@ -2538,25 +2604,34 @@ def install_program_in_place(src_path, **kwargs):
     sc_name += ".desktop"
     sc_path = os.path.join(applications, sc_name)
     old_sc_path = None
+    # installed_sc_path = getProgramValue(luid, 'install_shortcut')
+    # ^ value was faulty in old versions (used dst_path)!
     if old_sc_name is not None:
+        # INFO: Only old_sc_name is valid at this point. See changes
+        #   to sc_path further down.
         old_sc_name += ".desktop"
         print("* WARNING:{} name"
               " was {} as shortcut name"
               "".format(old_sc_name_msg, old_sc_name))
         old_sc_path = os.path.join(applications, old_sc_name)
     if luid is None:
-        print("WARNING: luid was never set, so setting to:")
         luid = toLUID(casedName)
-        print("  " + luid)
+        echo0("Warning: luid was never set, so '{}' will be used."
+              "".format(luid))
+
     try_icon = icons.get(luid)
     try_icon_url = iconLinks.get(luid)
+    old_luid = None
     print("* checking for known icon related to '{}'..."
           "".format(luid))
-
+    installed_luid = None
     if try_icon is not None:
+        old_luid = luid
         luid = try_icon
         print("  * using known icon luid '{}'".format(luid))
+        old_luid = luid
     if caption is None:
+        old_luid = luid
         luid = try_icon
         print("  * using unknown icon luid '{}'".format(luid))
         caption = luid
@@ -2564,6 +2639,43 @@ def install_program_in_place(src_path, **kwargs):
             caption += " " + version
         caption = caption[:1].upper() + caption[1:].lower()
         print("* using '" + caption + "' as caption (from luid)")
+
+    finalize_luid()  # Any `luid = ` after this must account for changes
+    # ^ ...and getProgramValue or setProgramValue is not allowed to
+    #   occur before this (raises exception).
+
+    if do_uninstall:
+        if old_luid is not None:
+            if getProgramValue(old_luid, 'dst_path') is not None:
+                installed_luid = old_luid
+        # if getProgramValue(luid, 'dst_path') is not None:
+        #     installed_luid = luid
+        # ^ done further down
+    # Only generate a different luid if a deprecated luid wasn't
+    #   already used for an installed program!
+
+    if do_uninstall:
+        installed_sc_path = getProgramValue(luid, 'uninstall_shortcut')
+        if installed_sc_path is None:
+            installed_sc_path = getProgramValue(luid, 'sc_path')
+        if installed_sc_path is not None:
+            sc_path = installed_sc_path
+            sc_name = os.path.split(sc_path)[1]
+            # FIXME: sc_name is used as luid if multiversion!
+            #   (See further down where sc_path is saved)
+        if installed_luid is not None:
+            if getProgramValue(luid, 'dst_path') is None:
+                # ^ luid not installed_luid, since luid should only
+                #   revert to an old entry if it wasn't also installed
+                #   the new way (guaranteed to be most recent install)!
+                luid = installed_luid
+            else:
+                echo0('Warning: There is an old entry for {installed_luid}'
+                      ' in "{logPath}" but the new entry "{luid}" will be used.'
+                      ' To avoid this warning, delete the entry for'
+                      ' {installed_luid}.'
+                      ''.format(installed_luid=installed_luid, logPath=logPath,
+                                luid=luid))
     logLn("luid=\"{}\"".format(luid))
     setProgramValue(luid, 'luid', luid)
 
@@ -2596,36 +2708,44 @@ def install_program_in_place(src_path, **kwargs):
                 if not os.path.isfile(icon_path):
                     print("* downloading \"{}\" to \"{}\"..."
                           "".format(try_icon_url, icon_path))
-                with open(icon_path, 'wb') as f:
-                    download(
-                        f,
-                        try_icon_url,
-                        cb_progress=dl_progress,
-                        cb_done=dl_done,
-                        # evt={'total_size': },
-                    )
+                    with open(icon_path, 'wb') as f:
+                        download(
+                            f,
+                            try_icon_url,
+                            cb_progress=dl_progress,
+                            cb_done=dl_done,
+                            # evt={'total_size': },
+                        )
                 else:
                     print("* \"{}\" already exists (skipping download)"
                           "".format(icon_path))
     print("    (The version will be added later if multiVersion)")
     dst_path = src_path  # same if in_place
-    # if dst_path
+    if do_uninstall:
+        prev_dst_path = dst_path
     try_dst_path = getProgramValue(luid, 'dst_path')
     try_dst_dirpath = getProgramValue(luid, 'dst_dirpath')
     dst_dirpath = None
-    if try_dst_path is not None:
+    if (do_uninstall) and (try_dst_path is not None):
         dst_path = try_dst_path
+        echo1()
+        echo1()
+        echo1('dst_path:"{}"'.format(dst_path))
         if dst_path != src_path:
             move_what = 'file'
-            print("* dst_path '{}' != src_path '{}' and is set in {}"
+            echo0("* dst_path '{}' != src_path '{}' and is set in {}"
                   " so move_what will be '{}'."
                   "".format(dst_path, src_path, localMachineMetaPath,
                             move_what))
         else:
-            print("* try_dst_path '{}' == src_path '{}' and is set in"
+            echo0("* try_dst_path '{}' == src_path '{}' and is set in"
                   " {} so move_what will remain as '{}'."
                   "".format(try_dst_path, src_path,
                             localMachineMetaPath, move_what))
+    else:
+        echo1()
+        echo1()
+        echo1("luid={} try_dst_path:{}".format(luid, try_dst_path))
     if try_dst_dirpath is not None:
         dst_dirpath = try_dst_dirpath
         if dst_dirpath != src_path:
@@ -2641,6 +2761,7 @@ def install_program_in_place(src_path, **kwargs):
                             localMachineMetaPath, move_what))
 
     # dst_programs = os.path.join(os.environ.get("HOME"), ".config")
+
     if move_what is None:
         if do_uninstall:
             if dst_path == src_path:
@@ -2679,14 +2800,21 @@ def install_program_in_place(src_path, **kwargs):
         if move_what not in ['file', 'directory']:
     '''
 
-    if move_what == 'file':
-        dst_path = os.path.join(dst_programs, filename)
-        setProgramValue(luid, 'dst_path', dst_path)
-    elif move_what == 'directory':
-        if dirname is None:
-            raise RuntimeError("Failed to generate dirname")
-        dst_path = os.path.join(dst_programs, dirname)
-        setProgramValue(luid, 'dst_path', dst_path)
+    if (dst_path is None) or (not do_uninstall):
+        # If not do_uninstall, the generated (non-deprecated) value
+        #   should be used regardless of what is in the registry.
+        if do_uninstall:
+            echo0("Warning: dst_path should be in the registry if"
+                  " doing an uninstall, but it was not. The path"
+                  " you specified will be used.")
+        if move_what == 'file':
+            dst_path = os.path.join(dst_programs, filename)
+            setProgramValue(luid, 'dst_path', dst_path)
+        elif move_what == 'directory':
+            if dirname is None:
+                raise RuntimeError("Failed to generate dirname")
+            dst_path = os.path.join(dst_programs, dirname)
+            setProgramValue(luid, 'dst_path', dst_path)
     # else it must be an in-place install.
     if pull_back:
         if dst_path == src_path:
@@ -2891,38 +3019,40 @@ def install_program_in_place(src_path, **kwargs):
             bin_name = os.path.split(src_path)[-1]
             dst_bin_path = os.path.join(dst_path, bin_name)
     '''
-    tryBinDir = os.path.dirname(dst_bin_path)
+    tryBinDir = None
     packageIcon = None
     packageShortcut = None
-    if os.path.split(tryBinDir)[1] == 'bin':
-        # Try examining the local directory (such as a venv) for
-        # matching metadata.
-        tryVenv = os.path.dirname(tryBinDir)
-        tryIconsDir = os.path.join(tryVenv, "share", "icons")
-        tryIcons = os.listdir(tryIconsDir)
-        if len(tryIcons) == 1:
-            packageIcon = os.path.join(tryIconsDir, tryIcons[0])
-            echo0('* detected packageIcon "{}"'
-                  ''.format(packageIcon))
+    if not do_uninstall:
+        tryBinDir = os.path.dirname(dst_bin_path)
+        if os.path.split(tryBinDir)[1] == 'bin':
+            # Try examining the local directory (such as a venv) for
+            # matching metadata.
+            tryVenv = os.path.dirname(tryBinDir)
+            tryIconsDir = os.path.join(tryVenv, "share", "icons")
+            tryIcons = os.listdir(tryIconsDir)
+            if len(tryIcons) == 1:
+                packageIcon = os.path.join(tryIconsDir, tryIcons[0])
+                echo0('* detected packageIcon "{}"'
+                      ''.format(packageIcon))
+            else:
+                echo0('* There was more than one image in "{}"'
+                      ' so the icon name is unknown: {}'
+                      ''.format(tryIconsDir, tryIcons))
+            tryShortcutsDir = os.path.join(tryVenv, "share", "applications")
+            tryShortcuts = os.listdir(tryShortcutsDir)
+            if len(tryShortcuts) == 1:
+                packageShortcut = os.path.join(tryShortcutsDir,
+                                               tryShortcuts[0])
+                echo0('* detected packageShortcut "{}"'
+                      ''.format(packageShortcut))
+            else:
+                echo0('* There was more than one file in "{}"'
+                      ' so the icon name is unknown: {}'
+                      ''.format(tryShortcutsDir, tryShortcuts))
         else:
-            echo0('* There was more than one image in "{}"'
-                  ' so the icon name is unknown: {}'
-                  ''.format(tryIconsDir, tryIcons))
-        tryShortcutsDir = os.path.join(tryVenv, "share", "applications")
-        tryShortcuts = os.listdir(tryShortcutsDir)
-        if len(tryShortcuts) == 1:
-            packageShortcut = os.path.join(tryShortcutsDir,
-                                           tryShortcuts[0])
-            echo0('* detected packageShortcut "{}"'
-                  ''.format(packageShortcut))
-        else:
-            echo0('* There was more than one file in "{}"'
-                  ' so the icon name is unknown: {}'
-                  ''.format(tryShortcutsDir, tryShortcuts))
-    else:
-        echo0('* checking for a virtualenv...'
-              'no (since "{}" is not named bin).'
-              ''.format(tryBinDir))
+            echo0('* checking for a virtualenv...'
+                  'no (since "{}" is not named bin).'
+                  ''.format(tryBinDir))
     if packageIcon is not None:
         icon_path = packageIcon
     if packageShortcut is not None:
@@ -3014,6 +3144,16 @@ def install_program_in_place(src_path, **kwargs):
                       " The sc_path {} will be used instead."
                       "".format(encode_py_val(try_sc_path),
                                 encode_py_val(sc_path)))
+        install_shortcut = getProgramValue(luid, 'uninstall_shortcut')
+        # ^ deprecated, see sc_path below.
+        # if install_shortcut is None:
+        #     install_shortcut = getProgramValue(luid, 'install_shortcut')
+        #     ^ faulty in versions that used it (was set to dst_path)!
+        if install_shortcut is None:
+            install_shortcut = getProgramValue(luid, 'sc_path')
+        if (not os.path.isfile(sc_path)) and (install_shortcut is not None):
+            if os.path.isfile(install_shortcut):
+                sc_path = install_shortcut
         logLn("uninstall_shortcut:{}".format(sc_path))
         if os.path.isfile(sc_path):
             print(u_cmd_parts)
@@ -3025,8 +3165,8 @@ def install_program_in_place(src_path, **kwargs):
                 print("rm {}".format(sh_literal(sc_path)))
                 os.remove(sc_path)
             else:
-                print("{} {}. {} was not present so no"
-                      " steps seem to be necessary."
+                print("{} {} ({} is no longer present so no"
+                      " steps seem to be necessary)."
                       "".format(" ".join(u_cmd_parts), xdg_msg,
                                 encode_py_val(sc_path)))
         else:
@@ -3061,6 +3201,13 @@ def install_program_in_place(src_path, **kwargs):
             if install_proc.returncode != 0:
                 inst_msg = "FAILED"
             if os.path.isfile(sc_path):
+                setProgramValue(luid, 'sc_path', sc_path)
+                if getProgramValue(luid, 'uninstall_shortcut') is not None:
+                    # fix the deprecated value.
+                    deleteProgramValue(luid, 'uninstall_shortcut', sc_path)
+                if getProgramValue(luid, 'install_shortcut') is not None:
+                    # fix the deprecated (which was also faulty) value.
+                    deleteProgramValue(luid, 'install_shortcut', sc_path)
                 os.chmod(sc_path,
                          (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
                           | stat.S_IWUSR))
@@ -3072,13 +3219,13 @@ def install_program_in_place(src_path, **kwargs):
                          | stat.S_IRGRP
                          | stat.S_IROTH | stat.S_IXOTH)
                 sys.stderr.write("OK\n")
-
             else:
-                print("* installing '{}'...{}".format(sc_name,
-                                                    inst_msg))
+                print("* installing '{}'...{}".format(sc_name, inst_msg))
             print("  Name={}".format(caption))
             print("  Exec={}".format(dst_bin_path))
-            logLn("install_shortcut:{}".format(dst_path))
+            logLn("dst_path:{}".format(dst_path))
+            # logLn("install_shortcut:{}".format(sc_path))
+            logLn("sc_path:{}".format(sc_path))
             print("  Icon={}".format(icon_path))
             # print("")
             # print("You may need to reload the application menu, such"
