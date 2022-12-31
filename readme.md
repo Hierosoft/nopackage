@@ -5,7 +5,7 @@ Automate the installation of any source with zero configuration. The
 source can be a zip, gz or any other tar-compatible binary package,
 appimage, directory, or executable file.
 
-Step 1: nopackage <packagename>
+Step 1: `nopackage install <packagename>`
 - There is only one step!
 - It installs in user space (~/.local, so add ~/.local/bin to your path--see the "Install" section).
 - It keeps uninstall metadata in ~/.config/nopackage/
@@ -15,7 +15,7 @@ Install an archive (deb, zip, gz, bz2), binary (including appimage) or directory
 - If there is a subdirectory in the archive, that will be detected and handled properly!
 - If it is a binary (including appimage), that will be detected and handled properly!
 - If there is no icon, and the icon is in `iconLinks`, that will be downloaded and used!
-  - Icons in nopackage/shortcut-metadata/<luid>.png will take precedence and prevent downloads
+  - Icons in `nopackage/shortcut-metadata/<luid>.png` will take precedence and prevent downloads
     (where nopackage is the nopackage subdirectory of the repo, or is installed in the system as a python package).
 
 This software was formerly a script in <https://github.com/poikilos/linux-preinstall/utilities>.
@@ -87,7 +87,7 @@ programs object in local_machine.json, you can uninstall the program
 using the `luid` (otherwise you need the full path of the source, which
 may be inaccessible). You can obtain the `luid` of any installed program
 by reviewing local_machine.json after the first run of the program. For
-example: `nopackage --uninstall keepassxc` (See also the beginning of
+example: `nopackage remove keepassxc` (See also the beginning of
 [`nopackage/__init__.py`](nopackage/__init__.py)).
 
 ### Multi-version support

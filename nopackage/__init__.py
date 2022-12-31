@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 '''
-nopackage tries to install any program such as a zip or gz binary
-package, appimage, directory, or other file.
+Install any program such as a zip or gz binary package, AppImage,
+directory, or other file. The filename or extracted content, whichever
+has the name of the program, is used to determine the "UNIX name" (as
+the term is used elsewhere such as SourceForge) which nopackage calls a
+"LUID" (Locally-unique Identifier). A "UNIX name" or luid is a
+lowercase string without spaces that uniquely identifies any project.
+It is used as:
+- The destination directory where the program will be installed (always
+  in the same directory scheme to match the behavior of Unix-like
+  operating systems)
+- The icon filename (if a fully qualified XDG program ID with vendor is
+  not present).
 
 Author: Jake Gustafson
 License: GPLv3 or later (https://www.gnu.org/licenses/)
@@ -9,26 +19,27 @@ License: GPLv3 or later (https://www.gnu.org/licenses/)
 Internet use: See iconLinks variable for what will be attempted when.
 
 USAGE:
-nopackage <Program Name_version.AppImage>
-nopackage <file.AppImage> <Icon Caption>
-nopackage <file.deb> <Icon Caption>
-nopackage <path> --move
-                 ^ moves the directory to $HOME/.local/lib64
-nopackage <path> --uninstall
+nopackage <command> [path|luid]
+nopackage install        <Program Name_version.AppImage>
+nopackage install        <file.AppImage> <Icon Caption>
+nopackage install        <file.deb> <Icon Caption>
+nopackage install <path> --move
+                         ^ moves the directory to $HOME/.local/lib64
+nopackage remove <path>
                  ^ removes it from $HOME/.local/lib64
                    and tries to recover the data to the original path
                    from which it was installed (using
                    local_machine.json).
-nopackage --uninstall keepassxc
-                      ^ Use a known luid from local_machine.json
-                        or reinstall the same version (if you didn't
-                        delete the source after uninstall, which
-                        --uninstall had tried to recover) like:
-                        nopackage --install keepassxc
-nopackage <path> --reinstall
-                 ^ removes it from $HOME/.local/lib64 first
+nopackage remove keepassxc
+                 ^ Use a known luid from local_machine.json
+                   or reinstall the same version (if you didn't
+                   delete the source after remove, which
+                   remove had tried to recover) like:
+                   nopackage --install keepassxc
+nopackage reinstall <path>
+                    ^ removes it from $HOME/.local/lib64 first
 
-nopackage --help
+nopackage help
           ^ Show this help screen.
 
 
@@ -432,7 +443,7 @@ def decode_py_val(valueStr, lineN=-1, path="(generated)"):
     Convert a symbolic value such as `"\"hello\""` or `"\"True\""` to a
     real value such as `"hello"` or `True`.
     This simplistic compared to str_to_value in enissue.py in
-    https://github.com/poikilos/EnlivenMinetest.
+    https://github.com/Poikilos/EnlivenMinetest.
 
     Keyword arguments:
     path -- The file (used for error reporting only).
@@ -1618,7 +1629,7 @@ localMachine = {
 }
 
 # Date variables below are borrowed from enissue.py in
-# <https://github.com/poikilos/EnlivenMinetest>, but the sanitized
+# <https://github.com/Poikilos/EnlivenMinetest>, but the sanitized
 # version instead of the Gitea-specific version is used:
 giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
 sanitizedDtExampleS = "2021-11-25T12:00:13-0500"
@@ -1930,7 +1941,7 @@ def install_program_in_place(src_path, **kwargs):
 
     ending = ".deb"
     if src_path.lower()[-(len(ending)):] == ending:
-        logLn("* switching to --reinstall mode automatically...")
+        logLn("* switching to reinstall mode automatically...")
         if enable_reinstall:
             logLn("  * already done")
         else:
@@ -2383,10 +2394,9 @@ def install_program_in_place(src_path, **kwargs):
             print("ERROR: '{}' is not a file.".format(src_path))
             try_dest_name = os.path.split(try_dest_path)[1]
             if os.path.isfile(try_dest_path):
-                print("'{}' is already {}ed.".format(try_dest_path,
-                                                     verb))
+                print("'{}' is already {}ed.".format(try_dest_path, verb))
             elif try_dest_name in ['remove', 'uninstall']:
-                print("Maybe you meant: --uninstall")
+                print("Maybe you meant: nopackage remove")
             return False
     print("{} started.".format(verb.title()))
 
@@ -2851,10 +2861,22 @@ def install_program_in_place(src_path, **kwargs):
         ' then comment this). move_what="{}"'.format(move_what)
     )
     '''
-
-    if not do_uninstall:
-        if not multiVersion:
+    op_date = datetime.now()
+    op_date_s = datetime.strftime(op_date, giteaSanitizedDtFmt)
+    if do_uninstall:
+        if multiVersion:
+            addPackageValue(sc_name, 'uninstall_date', op_date_s, unique=True)
+            echo0('* uninstalling versioned package "{}"'.format(sc_name))
+        else:
+            setProgramValue(luid, 'uninstall_date', op_date_s)
+    else:
+        if multiVersion:
+            addPackageValue(sc_name, 'move_what', move_what, unique=True)
+            addPackageValue(sc_name, 'install_date', op_date_s, unique=True)
+            echo0('* installing versioned package "{}"'.format(sc_name))
+        else:
             setProgramValue(luid, 'move_what', move_what)
+            setProgramValue(luid, 'install_date', op_date_s)
 
     if move_what == 'file':
         setProgramValue(luid, 'is_dir', False)
@@ -2936,8 +2958,8 @@ def install_program_in_place(src_path, **kwargs):
                     shutil.rmtree(dst_dirpath)
                 else:
                     logLn("ERROR: '{}' already exists. Use the"
-                          " --reinstall option to ERASE the"
-                          " directory.".format(dst_dirpath))
+                          " reinstall command to ERASE the"
+                          " entire directory!".format(dst_dirpath))
                     return False
             if os.path.isfile(src_path):
                 bin_name = os.path.split(src_path)[-1]
@@ -3245,10 +3267,10 @@ def main():
     global verbosity
     if len(sys.argv) < 2:
         usage()
-        print("")
-        print(noCmdMsg)
-        print("")
-        print("")
+        echo0("")
+        echo0("Error: You must specify a command.")
+        echo0("")
+        echo0("")
         return 1
     do_uninstall = False
     enable_reinstall = False
@@ -3256,17 +3278,17 @@ def main():
     multiVersion = None
     valueParams = {}
     valueParamsKey = None
+    command = None
+    COMMANDS = ['install', 'reinstall', 'remove']
     for i in range(1, len(sys.argv)):
         arg = sys.argv[i]
-        if arg[:2] == "--":
-            if arg == "--uninstall":
-                do_uninstall = True
-            elif arg == "--move":
+        if (i == 1) and (arg in COMMANDS):
+            command = arg
+        elif arg[:2] == "--":
+            if arg == "--move":
                 move_what = 'any'
             elif arg == "--version":
                 valueParamsKey = "version"
-            elif arg == "--reinstall":
-                enable_reinstall = True
             elif arg == "--multi-version":
                 multiVersion = True
             elif arg == "--help":
@@ -3290,6 +3312,15 @@ def main():
             else:
                 print("A 3rd parameter is unexpected: '{}'".format(arg))
                 return 1
+    if command is None:
+        usage()
+        echo0("")
+        echo0("Error: You must specify a command: {}".format(COMMANDS))
+        echo0("")
+    if command == "remove":
+        do_uninstall = True
+    elif command = "reinstall":
+        enable_reinstall = True
     if src_path is None:
         echo0("")
         echo0("Error: You must specify a source path.")
