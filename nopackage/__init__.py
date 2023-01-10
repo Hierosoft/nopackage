@@ -3319,7 +3319,7 @@ def main():
         echo0("")
     if command == "remove":
         do_uninstall = True
-    elif command = "reinstall":
+    elif command == "reinstall":
         enable_reinstall = True
     if src_path is None:
         echo0("")
