@@ -35,109 +35,42 @@ redo_verb="reinstall"
 if [ "@$UNINSTALL" = "@true" ]; then
     verb="uninstall"
     redo_verb="uninstall"
-elif [ ! -d "$dst_libs" ]; then
-    mkdir -p "$dst_libs"
-    if [ $? -ne 0 ]; then exit 1; fi
+# elif [ ! -d "$dst_libs" ]; then
+    # mkdir -p "$dst_libs"
+    # if [ $? -ne 0 ]; then exit 1; fi
 fi
 
 if [ -d "$dst_lib" ]; then
-    existing_src="`readlink $dst_lib`"
-    if [ -z "$existing_src" ]; then
+    # dst_lib is deprecated, so the logic here changed to cleanup only
+    # existing_src="`readlink $dst_lib`"
+    # if [ -z "$existing_src" ]; then
+    if [ ! -L "$dst_lib" ]; then
         # ^ If we are really, really sure it isn't a symlink, then:
-        if [ "@$FORCE" = "@true" ]; then
+        # if [ "@$FORCE" = "@true" ]; then
             rm -Rf "$dst_lib"
             if [ $? -ne 0 ]; then exit 1; fi
             echo "* removed existing $dst_lib (real directory, not symlink)"
-        else
-            echo "Error: \"$dst_lib\" already exists and isn't a symlink. Use --force to delete the entire directory and $redo_verb."
-            exit 1
-        fi
-    fi
-fi
-
-if [ -f "$dst_lib/__init__.py" ]; then
-    existing_src="`readlink $dst_lib`"
-    if [ -z "$existing_src" ]; then
-        echo "Error: There is a logic error in $0 $@. The existing src is not a symlink but that should already have been addressed (if --force). Otherwise, an exit code should have been returned by now."
-        exit 1
-    fi
-    if [ "@$UNINSTALL" = "@true" ]; then
-        printf "* removing $dst_lib (pointed to $existing_src)..."
+        # else
+        #     echo "Error: \"$dst_lib\" already exists and isn't a symlink. Use --force to delete the entire directory and $redo_verb."
+        #     exit 1
+        # fi
+    elif [ -L "$dst_lib" ]; then
         rm "$dst_lib"
-        if [ $? -ne 0 ]; then exit 1; fi
-        echo "OK"
-    else
-        if [ "$existing_src" != "$src_lib" ]; then
-            if [ "@$FORCE" = "@true" ]; then
-                printf "* removing $dst_lib (pointed to different source: $existing_src)..."
-                rm "$dst_lib"
-                # ^ rm shouldn't be recursive here because it is a symlink to a directory not a directory.
-                if [ $? -ne 0 ]; then exit 1; fi
-                echo "OK"
-            else
-                echo "Error: \"$dst_lib\" already exists but points to \"$existing_src\". Use --force to change the symlink to point to \"$src_lib\" and $redo_verb."
-                exit 1
-            fi
-        fi
-    fi
-else
-    if [ "@$UNINSTALL" = "@true" ]; then
-        echo "* \"$dst_lib\"...OK (already uninstalled)"
-    fi
-fi
-if [ "@$UNINSTALL" != "@true" ]; then
-    if [ ! -f "$dst_lib/__init__.py" ]; then
-        printf "* installing $dst_lib..."
-        ln -s "$src_lib" "$dst_lib"
-        if [ $? -ne 0 ]; then exit 1; fi
-        echo "OK"
-    else
-        existing_src="`readlink $dst_lib`"
-        if [ "$existing_src" != "$src_lib" ]; then
-            echo "Error: There is a logic error in the script. The existing \"$dst_lib\" is a symlink that points to the some other source (\"$existing_src\") instead of \"$src_lib\"but that should have been addressed above (if --force). Otherwise, an exit code should have been returned by now."
-            exit 1
-        fi
-        echo "* using existing symlink \"dst_lib\" since it already points to \"$src_lib\""
     fi
 fi
 
-src_bin="$src_lib/__init__.py"
+# src_bin="$src_lib/__init__.py"
+# src_bin=$src_exe
 dst_bin="$PREFIX/bin/nopackage"
 
-existing_src_bin=
+# existing_src_bin="`readlink $dst_bin`"
 if [ -f "$dst_bin" ]; then
-    existing_src_bin="`readlink $dst_bin`"
-    if [ -z "$existing_src_bin" ]; then
-        if [ "@$FORCE" = "@true" ]; then
-            rm "$dst_bin"
-            if [ $? -ne 0 ]; then exit 1; fi
-            echo "* removed existing \"$dst_bin\""
-        else
-            if [ "@$UNINSTALL" = "@true" ]; then
-                echo "Error: The existing \"$dst_bin\" is not a symlink. Use --force to remove it anyway to completely $verb."
-            else
-                echo "Error: The existing \"$dst_bin\" is not a symlink. Use --force to remove it and make it a link to $src_bin."
-            fi
-            exit 1
-        fi
-    elif [ "$existing_src_bin" != "$src_bin" ]; then
-        rm "$dst_bin"
-        if [ $? -ne 0 ]; then exit 1; fi
-        echo "* removed \"$dst_bin\" (It was linked to a different binary: \"$existing_src_bin\")"
-    else
-        if [ "@$UNINSTALL" = "@true" ]; then
-            rm "$dst_bin"
-            if [ $? -ne 0 ]; then exit 1; fi
-            echo "* removed \"$dst_bin\""
-        else
-            echo "* using existing $dst_bin since it already points to \"$src_bin\""
-        fi
-    fi
+    rm "$dst_bin"
 fi
 if [ "@$UNINSTALL" != "@true" ]; then
-    if [ "$existing_src_bin" != "$src_bin" ]; then
+    # if [ "$existing_src_bin" != "$src_bin" ]; then
         printf "* installing $dst_bin..."
-        ln -s "$src_bin" "$dst_bin"
+        ln -s "$src_exe" "$dst_bin"
         code=$?
         if [ $code -eq 0 ]; then
             echo "OK"
@@ -145,7 +78,7 @@ if [ "@$UNINSTALL" != "@true" ]; then
             echo "FAILED (line $LINENO)"
             exit $code
         fi
-    fi
+    # fi
 fi
 
 OLD_dst_sc="$PREFIX/share/applications/install_any.desktop"
@@ -188,7 +121,7 @@ fi
 # echo "Path=$HOME/.local/lib/nopackage" >> "$dst_sc"
 echo "Path=$src_repo" >> "$dst_sc"
 # ^ for metadata
-echo "Exec=$HOME/.local/lib/nopackage/__init__.py" >> "$dst_sc"
+echo "Exec=$HOME/.local/bin/nopackage" >> "$dst_sc"
 printf "* installing \"$dst_sc\"..."
 xdg-desktop-icon install --novendor $dst_sc
 code=$?
