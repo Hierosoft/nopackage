@@ -149,6 +149,7 @@ iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/m
 iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"
 iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.png"
 iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.png"
+iconLinks['pcsx2'] = "https://github.com/PCSX2/pcsx2/raw/master/bin/resources/icons/AppIconLarge.png"
 if platform.system() == "Windows":
     iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"
     iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"
@@ -162,6 +163,7 @@ iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
     'balenaetcher': "balenaetcher",  # since the file is named "icon.png"
+    'pcsx2': "pcsx2",  # since the icon is called "AppIconLarge.png"
 }
 # ^ A list of icon names where the downloaded file should be renamed.
 minimumUniquePartOfLuid = {
