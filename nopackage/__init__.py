@@ -1967,10 +1967,16 @@ def install_program_in_place(src_path, **kwargs):
         # tar = tarfile.open(src_path)
         # tar.extractall(path=ex_tmp)
         # tar.close()
-        next_path = os.path.join(ex_tmp, "data.tar.xz")
+        next_path = os.path.join(ex_tmp, "data.tar.gz")
+        if not os.path.isfile(next_path):
+            next_path = os.path.join(ex_tmp, "data.tar.xz")
         if not os.path.isfile(next_path):
             print("ERROR: Extracting deb did not result in"
                   " '{}'.".format(next_path))
+            print("Got:")
+            for sub in os.listdir(ex_tmp):
+                print(sub)
+            print()
             shutil.rmtree(ex_tmp)
             print("  * deleted {}.".format(ex_tmp))
             return False
@@ -2008,13 +2014,14 @@ def install_program_in_place(src_path, **kwargs):
         for folder_path in try_programs_paths:
             if not os.path.isdir(folder_path):
                 continue
-            not_programs = ["applications", "icons", "doc"]
+            not_programs = ["applications", "icons", "doc", "pixmaps", "lintian"]
             sub_names = os.listdir(folder_path)
             for sub_name in sub_names:
                 sub_path = os.path.join(folder_path, sub_name)
                 if os.path.isdir(sub_path) and (sub_name[:1] != "."):
                     if sub_name not in not_programs:
                         found_programs_paths.append(sub_path)
+                        print("found program dir: {}".format(sub_name))
         if len(found_programs_paths) == 0:
             print(
                 "ERROR: extracting '{}' from '{}' did not result in"
@@ -2285,7 +2292,11 @@ def install_program_in_place(src_path, **kwargs):
 
     if os.path.isdir(src_path):
         dirpath = src_path
-        print("* trying to detect binary...")
+        import struct
+        arch_suffix = "64"
+        if struct.calcsize('P') * 8 == 32:
+            arch_suffix = "32"
+        print("* trying to detect {}-bit binary...".format(arch_suffix))
         src_name = os.path.split(src_path)[-1]
         only_name = src_name.strip("-0123456789. ")
         try_name = src_name.split("-")[0]
@@ -2296,6 +2307,7 @@ def install_program_in_place(src_path, **kwargs):
             name_partial = src_name
         try_names.append(name_partial + ".sh")
         try_names.append(name_partial + ".py")
+        try_names.append(name_partial + arch_suffix)
         # ^ sh takes priority in case environment vars are necessary
         try_names.append(name_partial)
         if len(src_name.split("-")) > 1:
@@ -2422,6 +2434,8 @@ def install_program_in_place(src_path, **kwargs):
             raise RuntimeError("A single file install is impossible"
                                " since there is a directory.")
     if detect_program_parent:
+        print('detect_program_parent for dirpath "{}"'
+              ''.format(dirpath))
         this_programs_path = os.path.split(dirpath)[0]
         this_programs = os.path.split(this_programs_path)[-1]
         dst_programs = os.path.join(PREFIX, this_programs)
@@ -3344,7 +3358,7 @@ def main():
         move_what = 'file'
     version = valueParams.get('version')
     try:
-        install_program_in_place(
+        result = install_program_in_place(
             src_path,
             caption=caption,
             move_what=move_what,
@@ -3353,6 +3367,8 @@ def main():
             multiVersion=multiVersion,
             version=version,
         )
+        if not result:
+            return 1
     except ValueError as ex:
         if bad_id_flag in str(ex):
             print("Error: " + str(ex))
