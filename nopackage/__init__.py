@@ -2867,8 +2867,8 @@ def install_program_in_place(src_path, **kwargs):
             pass
         else:
             print("WARNING: The path is a file but move_what is"
-                  " 'directory' so the dst_dirpath {} may not be"
-                  " correct.".format(encode_py_val(dst_dirpath)))
+                  " 'directory' so the dst_dirpath {} may not be correct."
+                  "".format(encode_py_val(dst_dirpath)))
 
     echo1("move_what: {}".format(encode_py_val(move_what)))
     '''
@@ -2973,9 +2973,9 @@ def install_program_in_place(src_path, **kwargs):
                 if enable_reinstall:
                     shutil.rmtree(dst_dirpath)
                 else:
-                    logLn("ERROR: '{}' already exists. Use the"
-                          " reinstall command to ERASE the"
-                          " entire directory!".format(dst_dirpath))
+                    logLn("ERROR: '{}' already exists."
+                          " Use the reinstall command"
+                          " to ERASE the entire directory!".format(dst_dirpath))
                     return False
             if os.path.isfile(src_path):
                 bin_name = os.path.split(src_path)[-1]
@@ -3171,8 +3171,8 @@ def install_program_in_place(src_path, **kwargs):
         if try_sc_path is not None:
             if os.path.isfile(try_sc_path):
                 if sc_path != try_sc_path:
-                    echo0("WARNING: sc_path {} will be corrected to"
-                          " existing uninstall_shortcut {}."
+                    echo0("WARNING: sc_path {}"
+                          " will be corrected to existing uninstall_shortcut {}."
                           "".format(encode_py_val(sc_path),
                                     encode_py_val(try_sc_path)))
                     sc_path = try_sc_path
