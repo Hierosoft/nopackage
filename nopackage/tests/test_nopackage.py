@@ -2,7 +2,14 @@
 import sys
 import os
 
+import unittest
 from unittest import TestCase
+
+if __name__ == "__main__":
+    TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
+    MODULE_DIR = os.path.dirname(TESTS_DIR)
+    REPO_DIR = os.path.dirname(MODULE_DIR)
+    sys.path.insert(0, REPO_DIR)  # Find module when running test manually.
 
 from nopackage import (
     PackageInfo,
@@ -334,7 +341,8 @@ class TestNopackage(TestCase):
         self.assertEqual(pkg.version, "3.0.1")
         self.assertEqual(pkg.luid, "blender")
 
-
-# echo0("")
-# echo0("All tests passed.")
-# echo0("")
+if __name__ == "__main__":
+    sys.exit(unittest.main())
+    # echo0("")
+    # echo0("All tests passed.")
+    # echo0("")
