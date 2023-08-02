@@ -10,6 +10,10 @@ from nopackage import (
     tests,
     echo0,
 )
+
+if sys.version_info.major < 3:
+    FileNotFoundError = IOError
+
 myPath = os.path.realpath(__file__)
 testsDir = os.path.dirname(myPath)
 testDataPath = os.path.join(testsDir, "data")
@@ -144,7 +148,7 @@ class TestNopackage(TestCase):
 
         tests_dir = os.path.dirname(os.path.realpath(__file__))
         if not os.path.isdir(tests_dir):
-            raise DataError("{} is missing.".format(tests_dir))
+            raise FileNotFoundError("{} is missing.".format(tests_dir))
         test1_dir = os.path.join(tests_dir, "someprogram-1.0")
         src_path = test1_dir
         pkg = PackageInfo(src_path)

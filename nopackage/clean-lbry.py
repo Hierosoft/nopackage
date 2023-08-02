@@ -20,7 +20,8 @@ count = 0
 deletedMB = 0
 for parent in parents:
     if not os.path.isdir(parent):
-        print("Error: \"{}\" is missing.".format(Downloads))
+        print("Error: \"{}\" is missing.".format(parent))
+        # ^ formerly Downloads (undefined variable), not sure why
         break
     thisCount = 0
     for sub in os.listdir(parent):
