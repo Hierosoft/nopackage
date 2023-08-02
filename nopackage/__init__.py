@@ -19,7 +19,15 @@ License: GPLv3 or later (https://www.gnu.org/licenses/)
 Internet use: See iconLinks variable for what will be attempted when.
 
 USAGE:
-nopackage <command> [path|luid]
+nopackage <command> [path|luid] [options]
+
+OPTIONS:
+--version                Specify a version and allow installing
+                         multiple versions (same version is required
+                         for remove command or remove will show error).
+--caption                Specify a caption for the icon.
+
+EXAMPLES:
 nopackage install        <Program Name_version.AppImage>
 nopackage install        <file.AppImage> <Icon Caption>
 nopackage install        <file.deb> <Icon Caption>
@@ -45,6 +53,7 @@ nopackage help
 
 '''
 from __future__ import print_function
+
 import sys
 import stat
 import os
@@ -54,6 +63,7 @@ import tempfile
 from zipfile import ZipFile
 import platform
 import json
+import copy
 from datetime import datetime
 import inspect
 
@@ -100,6 +110,10 @@ from hierosoft.ggrep import (
     contains,
 )
 
+COMMANDS = ['install', 'reinstall', 'remove']
+VALUE_PARAM_KEYS = ["caption", "version"]
+
+
 lib64 = os.path.join(PREFIX, "lib64")
 lib = os.path.join(PREFIX, "lib")
 
@@ -127,6 +141,25 @@ bad_id_flag = ("you must use the id from"
                " the list of known installed programs")
 
 version_chars = digits + "."
+
+known_icons = [  # Look in ../misc or ../share/icons for these
+    "multicraft-xorg-icon-128.png",
+]
+platform_luid_local_icons = {
+    # look in ../misc or ../share/icons *if* matching os *and* luid
+    "Linux": {
+        "finetest": ["multicraft-xorg-icon-128.png",],
+        "minetest": ["minetest.svg",],
+    },
+    "Darwin": {
+        "finetest": ["minetest-icon.icns",],  # TODO: Use different one.
+        "minetest": ["minetest-icon.icns",],
+    },
+    "Windows": {
+        "finetest": ["multicraft-icon.ico",],
+        "minetest": ["minetest-icon.ico",],
+    },
+}
 
 # The following dictionaries contain information that can't be derived
 # from the installer file's name.
@@ -230,7 +263,18 @@ shortcutMetas = {
         'StartupNotify': "true",
         'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
     },
+    'minetest': {
+        'Comment': "Multiplayer infinite-world block sandbox",
+        'PrefersNonDefaultGPU': "true",
+        'Categories': "Game;Simulation;",
+        'StartupNotify': "false",
+        'Keywords': "sandbox;world;mining;crafting;blocks;nodes;multiplayer;roleplaying;",
+    },
 }
+shortcutMetas['finetest'] = copy.deepcopy(shortcutMetas['minetest'])
+shortcutMetas['finetest']['Keywords'] += "minetest;"
+shortcutMetas['multicraft'] = copy.deepcopy(shortcutMetas['minetest'])
+shortcutMetas['multicraft']['Keywords'] += "minetest;"
 
 luid = None
 for rawLuid, url in iconLinks.items():
@@ -269,6 +313,9 @@ casedNames = {  # A list of correct icon captions indexed by LUID
     'flashprint': "FlashPrint",
     'argouml': "ArgoUML",
     'ninja-ide': "Ninja-IDE",
+    'finetest': "Finetest",
+    'minetest': "Minetest",
+    'multicraft': "MultiCraft",  # C only capitalized for game, not MC hosting
 }
 annotations = {  # Add a parenthetical to the shortcut caption.
     '.deb': "deb",
@@ -3066,27 +3113,74 @@ def install_program_in_place(src_path, **kwargs):
             # Try examining the local directory (such as a venv) for
             # matching metadata.
             tryVenv = os.path.dirname(tryBinDir)
-            tryIconsDir = os.path.join(tryVenv, "share", "icons")
-            tryIcons = os.listdir(tryIconsDir)
-            if len(tryIcons) == 1:
-                packageIcon = os.path.join(tryIconsDir, tryIcons[0])
-                echo0('* detected packageIcon "{}"'
-                      ''.format(packageIcon))
+            tryIconsDirs = [
+                os.path.join(tryVenv, "share", "icons"),  # virtualenv
+                os.path.join(tryVenv, "misc"),  # minetest
+            ]
+            luid_local_icons = platform_luid_local_icons[platform.system()]
+            known_icons = None
+            if luid_local_icons is not None:
+                known_icons = luid_local_icons.get(luid)
+                no_known_msg = ("there are no known icon names for {}"
+                                "".format(platform.system()))
             else:
-                echo0('* There was more than one image in "{}"'
-                      ' so the icon name is unknown: {}'
-                      ''.format(tryIconsDir, tryIcons))
-            tryShortcutsDir = os.path.join(tryVenv, "share", "applications")
-            tryShortcuts = os.listdir(tryShortcutsDir)
-            if len(tryShortcuts) == 1:
-                packageShortcut = os.path.join(tryShortcutsDir,
-                                               tryShortcuts[0])
-                echo0('* detected packageShortcut "{}"'
-                      ''.format(packageShortcut))
+                no_known_msg = ("there are no known icon names for {}"
+                                "".format(luid))
+            if known_icons is not None:
+                no_known_msg = ("there are no icons named {} in any of {}"
+                                "".format(known_icons, tryIconsDirs))
             else:
-                echo0('* There was more than one file in "{}"'
-                      ' so the icon name is unknown: {}'
-                      ''.format(tryShortcutsDir, tryShortcuts))
+                known_icons = []
+            tryIconsDirPresentCount = 0
+            for tryIconsDir in tryIconsDirs:
+                if not os.path.isdir(tryIconsDir):
+                    continue
+                tryIconsDirPresentCount += 1
+                tryIcons = os.listdir(tryIconsDir)
+                known_icon = None
+                for tryKnownIcon in known_icons:
+                    if tryKnownIcon in tryIcons:
+                        known_icon = tryKnownIcon
+                        break
+                if known_icon is not None:
+                    packageIcon = os.path.join(tryIconsDir, known_icon)
+                    echo0('* detected known packageIcon name "{}"'
+                          ''.format(packageIcon))
+                elif len(tryIcons) == 1:
+                    packageIcon = os.path.join(tryIconsDir, tryIcons[0])
+                    echo0('* detected packageIcon "{}"'
+                          ''.format(packageIcon))
+                else:
+                    echo0('* There was more than one image in "{}"'
+                          ' so the icon name is unknown: {}'
+                          ''.format(tryIconsDir, tryIcons))
+            if tryIconsDirPresentCount < 1:
+                echo0('The icon was not detected and {}'
+                      ''.format(no_known_msg))
+            tryShortcutsDirs = [
+                os.path.join(tryVenv, "share", "applications"),
+                os.path.join(tryVenv, "misc"),  # minetest
+            ]
+            # TODO: before running this on minetest, the icon
+            #   should be renamed.
+            tryShortcutsDirPresentCount = 0
+            for tryShortcutsDir in tryShortcutsDirs:
+                if not os.path.isdir(tryShortcutsDir):
+                    continue
+                tryShortcutsDirPresentCount += 1
+                tryShortcuts = os.listdir(tryShortcutsDir)
+                if len(tryShortcuts) == 1:
+                    packageShortcut = os.path.join(tryShortcutsDir,
+                                                   tryShortcuts[0])
+                    echo0('* detected packageShortcut "{}"'
+                          ''.format(packageShortcut))
+                else:
+                    echo0('* There was more than one file in "{}"'
+                          ' so the icon name is unknown: {}'
+                          ''.format(tryShortcutsDir, tryShortcuts))
+            if tryShortcutsDirPresentCount < 1:
+                echo0("There are no .desktop file directories like: {}"
+                      "".format(tryShortcutsDirs))
         else:
             echo0('* checking for a virtualenv...'
                   'no (since "{}" is not named bin).'
@@ -3295,16 +3389,26 @@ def main():
     valueParams = {}
     valueParamsKey = None
     command = None
-    COMMANDS = ['install', 'reinstall', 'remove']
     for i in range(1, len(sys.argv)):
         arg = sys.argv[i]
         if (i == 1) and (arg in COMMANDS):
             command = arg
+        elif valueParamsKey is not None:
+            if valueParamsKey not in VALUE_PARAM_KEYS:
+                usage()
+                # raise argparse.ArgumentError
+                raise ValueError(
+                    "Invalid option: {}".format(valueParamsKey)
+                )
+            valueParams[valueParamsKey] = arg
+            valueParamsKey = None
         elif arg[:2] == "--":
             if arg == "--move":
                 move_what = 'any'
             elif arg == "--version":
                 valueParamsKey = "version"
+            elif arg == "--caption":
+                valueParamsKey = "caption"
             elif arg == "--multi-version":
                 multiVersion = True
             elif arg == "--help":
@@ -3317,14 +3421,11 @@ def main():
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
                 return 1
-        elif valueParamsKey is not None:
-            valueParams[valueParamsKey] = arg
-            valueParamsKey = None
         else:
             if src_path is None:
                 src_path = arg
             elif caption is None:
-                caption = arg
+                valueParams["caption"] = arg
             else:
                 print("A 3rd parameter is unexpected: '{}'".format(arg))
                 return 1
@@ -3354,9 +3455,10 @@ def main():
             return 1
 
     parts = src_path.split('.')
-    if parts[-1] == "AppImage":
+    if parts[-1].lower() == "appimage":
         move_what = 'file'
     version = valueParams.get('version')
+    caption = valueParams.get('caption')
     try:
         result = install_program_in_place(
             src_path,
