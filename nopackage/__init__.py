@@ -191,14 +191,22 @@ if platform.system() == "Windows":
 elif platform.system() == "Darwin":
     iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.icns"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
-
+# iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?cache=&media=qortal_official_icon_transparent_.png"
+# ^ Not square unless cropped
+# iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png"
+# ^ 403 Forbidden unless using browser (maybe referrer is checked)
+# ^ Leave as None since luid-named file is in "shortcut-metadata" dir
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
     'balenaetcher': "balenaetcher",  # since the file is named "icon.png"
     'pcsx2': "pcsx2",  # since the icon is called "AppIconLarge.png"
+    # 'qortal': "qortal",  # since the only known square icon is https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png
+    # ^ commented since URL has 403 (icon is in "shortcut-metadata" dir now)
 }
 # ^ A list of icon names where the downloaded file should be renamed.
+# ^ Also generated names are put here during module load!
+#   See `iconNames[luid] = noExt` above `del luid`
 minimumUniquePartOfLuid = {
     'unityhub': "unity",
 }
@@ -280,6 +288,17 @@ luid = None
 for rawLuid, url in iconLinks.items():
     lastSlashI = url.rfind("/")
     fileName = url[lastSlashI+1:]
+    if "?" in fileName:
+        lastSignI = fileName.rfind("=")
+        if lastSignI < 0:
+            lastSignI = fileName.rfind("?")
+        fileName = fileName[lastSignI+1:]
+    noExt, dotExt = os.path.splitext(fileName)
+    if not dotExt:
+        echo0("Warning: No extension on <{}> from iconLinks. Assuming png."
+              "".format(url))
+        dotExt = ".png"  # FIXME: assumes format
+    fileName = rawLuid + dotExt
     luid = rawLuid
     # gotLuid = hyphenate_names_lookup.get(luid)
     # if gotLuid is not None:
@@ -287,6 +306,9 @@ for rawLuid, url in iconLinks.items():
     gotName = iconNames.get(luid)
     if gotName is not None:
         fileName = gotName
+    else:
+        noExt, dotExt = os.path.splitext(fileName)
+        iconNames[luid] = noExt  # Rewrite the generated name.
     any_part_of_luid_in_name = False
     luidParts = luid.split(".")
     notDividedPart = minimumUniquePartOfLuid.get(luid)
@@ -2789,6 +2811,10 @@ def install_program_in_place(src_path, **kwargs):
                             cb_done=dl_done,
                             # evt={'total_size': },
                         )
+                        # FIXME: ^ doesn't check for 403 error such as
+                        # in
+                        # https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png
+                        # (leaves blank file)!
                 else:
                     print("* \"{}\" already exists (skipping download)"
                           "".format(icon_path))
