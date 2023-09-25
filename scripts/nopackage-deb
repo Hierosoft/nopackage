@@ -1,0 +1,23 @@
+#!/bin/bash
+INSTALLER="$1"
+error_msg(){
+    if [ -f "`command -v xmessage`" ]; then
+        xmessage -nearmouse "$1"
+    else
+        notify-send "$1"
+    fi
+}
+
+mkdir -p ~/tmp
+LOG_PATH=~/tmp/nopackage.log
+
+nopackage install "$INSTALLER" > $LOG_PATH 2>&1
+code=$?
+
+if [ $code -ne 0 ]; then
+    error_msg "Installation failed. See $LOG_PATH."
+    cat $LOG_PATH
+else
+    error_msg "nopackage installed $INSTALLER successfully. See $LOG_PATH."
+    cat $LOG_PATH
+fi
