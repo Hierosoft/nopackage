@@ -196,6 +196,8 @@ elif platform.system() == "Darwin":
 # iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png"
 # ^ 403 Forbidden unless using browser (maybe referrer is checked)
 # ^ Leave as None since luid-named file is in "shortcut-metadata" dir
+iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
+
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
@@ -2371,20 +2373,22 @@ def install_program_in_place(src_path, **kwargs):
         try_name = src_name.split("-")[0]
         try_names = []
         if src_name not in hyphenate_names:
-            name_partial = src_name.split("-")[0]
+            name_partial0 = src_name.split("-")[0]
         else:
-            name_partial = src_name
-        try_names.append(name_partial + ".sh")
-        try_names.append(name_partial + ".py")
-        try_names.append(name_partial + arch_suffix)
-        # ^ sh takes priority in case environment vars are necessary
-        try_names.append(name_partial)
-        if len(src_name.split("-")) > 1:
-            try_names.append(src_name.split("-")[1] + ".sh")
-            # ^ such as studio.sh for android-studio
-        print("  src_name: {}".format(src_name))
-        print("  only_name: {}".format(only_name))
-        print("  name_partial: {}".format(name_partial))
+            name_partial0 = src_name
+        for name_partial in (name_partial0, name_partial0.lower()):
+            try_names.append(name_partial + ".sh")
+            try_names.append(name_partial + ".py")
+            try_names.append(name_partial + arch_suffix)
+            # ^ sh takes priority in case environment vars are necessary
+            try_names.append(name_partial)
+            if len(src_name.split("-")) > 1:
+                try_names.append(src_name.split("-")[1] + ".sh")
+                # ^ such as studio.sh for android-studio
+            print("  src_name: {}".format(src_name))
+            print("  only_name: {}".format(only_name))
+            print("  name_partial: {}".format(name_partial))
+
         got_path = None
         try_paths = []
         for try_name in try_names:
