@@ -122,6 +122,14 @@ else
 fi
 ```
 
+### Code style
+PEP8 is preferred. However, camel case is sometimes used. You can disable the following in your linter:
+- N816 use uppercase in global scope
+  - may be changed later
+- N806 variable should be lowercase
+- N803 argument should be lowercase
+- N802 function should be lowercase
+
 ### History
 
 For older git history not available in the web interface, see

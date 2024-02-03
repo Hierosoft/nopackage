@@ -4,5 +4,9 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"flake8.args": [
+			"--ignore=N816,N806,N803,N802,E226,W503"
+		]
+	}
 }
