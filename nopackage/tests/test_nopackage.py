@@ -28,6 +28,7 @@ if not os.path.isdir(testDataPath):
     raise IOError("The test folder is missing: \"{}\""
                   "".format(testDataPath))
 
+
 def toPythonLiteral(v):
     '''
     [copied from pycodetools.parsing by author]
@@ -53,6 +54,7 @@ def toPythonLiteral(v):
     return "'{}'".format(
         v.replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
     )
+
 
 """
 def assertEqual(v1, v2, tbs=None):
@@ -100,6 +102,7 @@ def assertAllEqual(list1, list2, tbs=None):
 
 PackageInfo.verbosity = 2
 
+
 class TestNopackage(TestCase):
     def test_1_self(self):
         echo0()
@@ -113,25 +116,26 @@ class TestNopackage(TestCase):
         echo0()
 
     def assertAllEqual(self, list1, list2, tbs=None):
-            '''
-            [copied from pycodetools.parsing by author]
-            '''
-            if len(list1) != len(list2):
-                echo0("The lists are not the same length: list1={}"
-                      " and list2={}".format(list1, list2))
-                self.assertEqual(len(list1), len(list2))
-            for i in range(len(list1)):
-                try:
-                    self.assertEqual(list1[i], list2[i])
-                except AssertionError as ex:
-                    if tbs is not None:
-                        echo0(tbs)
-                    raise ex
+        '''
+        [copied from pycodetools.parsing by author]
+        '''
+        if len(list1) != len(list2):
+            echo0("The lists are not the same length: list1={}"
+                  " and list2={}".format(list1, list2))
+            self.assertEqual(len(list1), len(list2))
+        for i in range(len(list1)):
+            try:
+                self.assertEqual(list1[i], list2[i])
+            except AssertionError as ex:
+                if tbs is not None:
+                    echo0(tbs)
+                raise ex
 
     def test_2_name_parsing(self):
 
         fn = "blender-2.79b-linux-glibc219-x86_64"
-        chunks =['linux', 'X86_64']  # intentionally different case for CI test
+        chunks = ['linux', 'X86_64']
+        # ^ intentionally different case for CI test
         results = find_all_any_ci(
             fn,
             chunks,
@@ -226,7 +230,10 @@ class TestNopackage(TestCase):
             else:
                 raise ex
         if not found:
-            raise RuntimeError("The program should have detected a filename (not including extension) with no alphabetic characters as bad (See code near `startChar` in nopackage).")
+            raise RuntimeError("The program should have detected a filename"
+                               " (not including extension) with no alphabetic"
+                               " characters as bad (See code near `startChar`"
+                               " in nopackage).")
 
         src_path = "blender-2.49b-linux-glibc236-py26-x86_64.tar.bz2"
         pkg = PackageInfo(src_path, is_dir=False)
@@ -340,6 +347,7 @@ class TestNopackage(TestCase):
         self.assertEqual(pkg.caption, "Blender 3.0.1")
         self.assertEqual(pkg.version, "3.0.1")
         self.assertEqual(pkg.luid, "blender")
+
 
 if __name__ == "__main__":
     sys.exit(unittest.main())

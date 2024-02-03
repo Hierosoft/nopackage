@@ -67,7 +67,34 @@ import copy
 from datetime import datetime
 import inspect
 
-'''
+from nopackage.find_hierosoft import hierosoft  # noqa F401
+
+from hierosoft.moreweb import (
+    # request,
+    download,
+)
+
+from hierosoft import (  # noqa F401
+    CompletedProcess,
+    subprocess,
+    echo0,
+    echo1,
+    echo2,
+    get_unique_path,
+    PREFIX,  # ~/.local, formerly defined below and named PREFIX
+    SHARE,  # formerly defined below and called share_path
+    PIXMAPS,  # formerly defined below and named PIXMAPS
+    giteaSanitizedDtFmt,
+    # sanitizedDtExampleS,
+)
+
+from hierosoft.ggrep import (
+    contains_any,
+    # any_contains,
+    # contains,
+)
+
+__license__ = '''
 nopackage tries to install any folder or archived binary package.
 Copyright (C) 2019  Jake "Poikilos" Gustafson
 
@@ -84,31 +111,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-
-from nopackage.find_hierosoft import hierosoft
-
-from hierosoft.moreweb import (
-    request,
-    download,
-)
-
-from hierosoft import (
-    CompletedProcess,
-    subprocess,
-    echo0,
-    echo1,
-    echo2,
-    get_unique_path,
-    PREFIX,  # ~/.local, formerly defined below and named PREFIX
-    SHARE, # formerly defined below and called share_path
-    PIXMAPS, # formerly defined below and named PIXMAPS
-)
-
-from hierosoft.ggrep import (
-    contains_any,
-    any_contains,
-    contains,
-)
 
 COMMANDS = ['install', 'reinstall', 'remove']
 VALUE_PARAM_KEYS = ["caption", "version"]
@@ -157,6 +159,8 @@ platform_luid_local_icons = {
     },
     "Windows": {
         "finetest": ["multicraft-icon.ico",],
+        # ^ finetest also now has doc/mkdocs/docs/img/favicon.ico
+        #   (does it require building docs first?)
         "minetest": ["minetest-icon.ico",],
     },
 }
@@ -191,9 +195,9 @@ if platform.system() == "Windows":
 elif platform.system() == "Darwin":
     iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.icns"
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
-# iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?cache=&media=qortal_official_icon_transparent_.png"
+# noqa E501 iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?cache=&media=qortal_official_icon_transparent_.png"
 # ^ Not square unless cropped
-# iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png"
+# noqa E501 iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png"
 # ^ 403 Forbidden unless using browser (maybe referrer is checked)
 # ^ Leave as None since luid-named file is in "shortcut-metadata" dir
 iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
@@ -203,7 +207,7 @@ iconNames = {
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
     'balenaetcher': "balenaetcher",  # since the file is named "icon.png"
     'pcsx2': "pcsx2",  # since the icon is called "AppIconLarge.png"
-    # 'qortal': "qortal",  # since the only known square icon is https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png
+    # noqa E501 'qortal': "qortal",  # since the only known square icon is https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png
     # ^ commented since URL has 403 (icon is in "shortcut-metadata" dir now)
 }
 # ^ A list of icon names where the downloaded file should be renamed.
@@ -254,7 +258,7 @@ shortcutMetas = {
         'Comment': "Controls your 3D printer",
         'StartupNotify': "true",
         'Categories': "GNOME;GTK;Utility;Graphics;3DGraphics;",
-        'Mimetype': "MimeType=application/sla;model/x.stl-binary;model/x.stl-ascii;text/x.gcode;",
+        'Mimetype': "MimeType=application/sla;model/x.stl-binary;model/x.stl-ascii;text/x.gcode;",  # noqa E501
     },
     'pronsole': {
         # See <https://github.com/kliment/Printrun/blob/master/
@@ -265,20 +269,21 @@ shortcutMetas = {
         'Terminal': "true",
         'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
     },
-    'pronsole': {
-        # See <https://github.com/kliment/Printrun/blob/master/
-        #   plater.desktop>
-        'GenericName': "Printer building tool",
-        'Comment': "Prepares plates for 3D printing",
-        'StartupNotify': "true",
-        'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
-    },
+    # FIXME: Get right luid for one below (pronsole is done above & correct)
+    # 'pronsole': {
+    #     # See <https://github.com/kliment/Printrun/blob/master/
+    #     #   plater.desktop>
+    #     'GenericName': "Printer building tool",
+    #     'Comment': "Prepares plates for 3D printing",
+    #     'StartupNotify': "true",
+    #     'Categories': "Utility;Graphics;3DGraphics;ConsoleOnly;",
+    # },
     'minetest': {
         'Comment': "Multiplayer infinite-world block sandbox",
         'PrefersNonDefaultGPU': "true",
         'Categories': "Game;Simulation;",
         'StartupNotify': "false",
-        'Keywords': "sandbox;world;mining;crafting;blocks;nodes;multiplayer;roleplaying;",
+        'Keywords': "sandbox;world;mining;crafting;blocks;nodes;multiplayer;roleplaying;",  # noqa E501
     },
 }
 shortcutMetas['finetest'] = copy.deepcopy(shortcutMetas['minetest'])
@@ -450,29 +455,36 @@ def format_shortcut(shortcut_data, meta, path=None, add_all=True):
                 marks[name] = True
     return result
 
+
 LUID_IS_FINALIZED = False
 LUID = None
+
 
 def finalize_luid():
     global LUID_IS_FINALIZED
     LUID_IS_FINALIZED = True
 
+
 def unfinalize_luid():
     global LUID_IS_FINALIZED
     LUID_IS_FINALIZED = False
+
 
 def set_luid(luid):
     global LUID
     LUID = luid
 
+
 def luid_finalized():
     return LUID_IS_FINALIZED
+
 
 def get_luid():
     if not luid_finalized():
         echo0("Warning: luid {} was accessed before finalized."
               " That means it may be ambiguous and not calculated fully.")
     return LUID
+
 
 def getProgramIDs():
     results = []
@@ -635,8 +647,8 @@ def getProgramValue(luid, key, force=False, delete=False):
     '''
     if not luid_finalized():
         msg = ("A key for luid {} was attempted to be set before finalized."
-                "".format(luid))
-        if True: # not force:
+               "".format(luid))
+        if True:  # not force:
             raise RuntimeError(msg)
         else:
             echo0("Warning (force={}, but Making temp PackageInfo"
@@ -644,8 +656,10 @@ def getProgramValue(luid, key, force=False, delete=False):
                   "".format(force, msg))
     return getDeepValue('programs', luid, key, delete=delete)
 
+
 def deleteProgramValue(luid, key, force=False):
     return getProgramValue(luid, key, force=force, delete=True)
+
 
 def getDeepValues(category, luid, key):
     if localMachine.get(category) is None:
@@ -793,7 +807,7 @@ def sh_literal(v):
     if my_q is not None:
         for c in sh_specials:
             v = v.replace(c, "\\"+c)
-        return my_q+v+my_q
+        return my_q + v + my_q
     return v
 
 
@@ -1663,6 +1677,7 @@ def dir_is_empty(folder_path):
         count += 1
     return count < 1
 
+
 OLD_CONFS = get_unique_path("install_any", "Configs:Unique")
 MY_CONFS = get_unique_path("nopackage", "Configs:Unique")  # formerly myAppData
 if not os.path.isdir(MY_CONFS):
@@ -1701,11 +1716,6 @@ localMachine = {
     'programs': {}
 }
 
-# Date variables below are borrowed from enissue.py in
-# <https://github.com/Poikilos/EnlivenMinetest>, but the sanitized
-# version instead of the Gitea-specific version is used:
-giteaSanitizedDtFmt = "%Y-%m-%dT%H:%M:%S%z"
-sanitizedDtExampleS = "2021-11-25T12:00:13-0500"
 
 
 def fillProgramMeta(programMeta):
@@ -1743,6 +1753,12 @@ if not os.path.isfile(localMachineMetaPath):
                           'uninstall_file', 'recovered_to', 'luid',
                           'ERROR', 'install_move_dir',
                           'install_shortcut', 'uninstall_shortcut'])
+        # NOTE: ^ Should *only* have *deprecated* values!
+        # - This is loading a log file, *if* there is no JSON file,
+        #   to reconstruct JSON.
+
+        # FIXME: Maybe remap 'install_shortcut' to 'dst_path'
+        #   (held dst_path value incorrectly in older versions)
         with open(logPath, 'r') as ins:
             thisMeta = {
                 'logLineNumber': lineN,
@@ -1825,6 +1841,10 @@ if not os.path.isfile(localMachineMetaPath):
                     thisMeta['install_move_dir'] = value
                 elif name == 'install_shortcut':
                     thisMeta['install_shortcut'] = value
+                    # NOTE: In old versions, the value was accidentally
+                    #   set to dst_path. Assume log is intact for now
+                    #   (deleted on install/uninstall & fixed by
+                    #   regenerating--new key is 'sc_path').
                 elif name == 'uninstall_shortcut':
                     thisMeta['uninstall_shortcut'] = value
                     thisMeta['installed'] = False
@@ -2085,7 +2105,8 @@ def install_program_in_place(src_path, **kwargs):
         for folder_path in try_programs_paths:
             if not os.path.isdir(folder_path):
                 continue
-            not_programs = ["applications", "icons", "doc", "pixmaps", "lintian"]
+            not_programs = ["applications", "icons", "doc", "pixmaps",
+                            "lintian"]
             sub_names = os.listdir(folder_path)
             for sub_name in sub_names:
                 sub_path = os.path.join(folder_path, sub_name)
@@ -2594,7 +2615,8 @@ def install_program_in_place(src_path, **kwargs):
                 elif len(casedName) < len(thisPkg.casedName):
                     print('WARNING: the previously collected name'
                           ' "{}" is shorter than the detected name'
-                          ' "{}" (tries: {})'.format(casedName, thisPkg.casedName, pkgs))
+                          ' "{}" (tries: {})'
+                          ''.format(casedName, thisPkg.casedName, pkgs))
                     casedName = pkg.casedName
                     if luid is None:
                         if thisPkg.luid is None:
@@ -2769,8 +2791,8 @@ def install_program_in_place(src_path, **kwargs):
                 #   the new way (guaranteed to be most recent install)!
                 luid = installed_luid
             else:
-                echo0('Warning: There is an old entry for {installed_luid}'
-                      ' in "{logPath}" but the new entry "{luid}" will be used.'
+                echo0('Warning: There is an old entry for {installed_luid} in'
+                      ' "{logPath}" but the new entry "{luid}" will be used.'
                       ' To avoid this warning, delete the entry for'
                       ' {installed_luid}.'
                       ''.format(installed_luid=installed_luid, logPath=logPath,
@@ -3052,7 +3074,8 @@ def install_program_in_place(src_path, **kwargs):
                 else:
                     logLn("ERROR: '{}' already exists."
                           " Use the reinstall command"
-                          " to ERASE the entire directory!".format(dst_dirpath))
+                          " to ERASE the entire directory!"
+                          "".format(dst_dirpath))
                     return False
             if os.path.isfile(src_path):
                 bin_name = os.path.split(src_path)[-1]
@@ -3296,9 +3319,9 @@ def install_program_in_place(src_path, **kwargs):
             if os.path.isfile(try_sc_path):
                 if sc_path != try_sc_path:
                     echo0("WARNING: sc_path {}"
-                          " will be corrected to existing uninstall_shortcut {}."
-                          "".format(encode_py_val(sc_path),
-                                    encode_py_val(try_sc_path)))
+                          " will be corrected to existing uninstall_shortcut"
+                          " {}.".format(encode_py_val(sc_path),
+                                        encode_py_val(try_sc_path)))
                     sc_path = try_sc_path
                     setProgramValue(luid, "sc_path", sc_path)
             else:
@@ -3306,16 +3329,17 @@ def install_program_in_place(src_path, **kwargs):
                       " The sc_path {} will be used instead."
                       "".format(encode_py_val(try_sc_path),
                                 encode_py_val(sc_path)))
-        install_shortcut = getProgramValue(luid, 'uninstall_shortcut')
-        # ^ deprecated, see sc_path below.
-        # if install_shortcut is None:
-        #     install_shortcut = getProgramValue(luid, 'install_shortcut')
-        #     ^ faulty in versions that used it (was set to dst_path)!
-        if install_shortcut is None:
-            install_shortcut = getProgramValue(luid, 'sc_path')
-        if (not os.path.isfile(sc_path)) and (install_shortcut is not None):
-            if os.path.isfile(install_shortcut):
-                sc_path = install_shortcut
+        got_sc_path = getProgramValue(luid, 'uninstall_shortcut')
+        # FIXME: ^ deprecated, see sc_path below.
+        # if got_sc_path is None:
+        #     got_sc_path = getProgramValue(luid, 'install_shortcut')
+        #     ^ faulty in versions that used it (was set to dst_path
+        #       such as AppImage file path)!
+        if got_sc_path is None:
+            got_sc_path = getProgramValue(luid, 'sc_path')
+        if (not os.path.isfile(sc_path)) and (got_sc_path is not None):
+            if os.path.isfile(got_sc_path):
+                sc_path = got_sc_path
         logLn("uninstall_shortcut:{}".format(sc_path))
         if os.path.isfile(sc_path):
             print(u_cmd_parts)
@@ -3368,7 +3392,8 @@ def install_program_in_place(src_path, **kwargs):
                     # fix the deprecated value.
                     deleteProgramValue(luid, 'uninstall_shortcut', sc_path)
                 if getProgramValue(luid, 'install_shortcut') is not None:
-                    # fix the deprecated (which was also faulty) value.
+                    # fix the deprecated (which was also faulty) value
+                    # (was accidentally set to dst_path in older versions).
                     deleteProgramValue(luid, 'install_shortcut', sc_path)
                 os.chmod(sc_path,
                          (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
