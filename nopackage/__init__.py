@@ -81,12 +81,13 @@ from hierosoft import (  # noqa F401
     echo1,
     echo2,
     get_unique_path,
-    PREFIX,  # ~/.local, formerly defined below and named PREFIX
-    SHARE,  # formerly defined below and called share_path
-    PIXMAPS,  # formerly defined below and named PIXMAPS
+    sysdirs,
     giteaSanitizedDtFmt,
     # sanitizedDtExampleS,
 )
+# sysdirs['PREFIX'] usually ~/.local, formerly PREFIX defined below
+# sysdirs['SHARE'],  # formerly defined below and called share_path
+# sysdirs['PIXMAPS'],  # formerly defined below and called PIXMAPS
 
 from hierosoft.ggrep import (
     contains_any,
@@ -116,8 +117,8 @@ COMMANDS = ['install', 'reinstall', 'remove']
 VALUE_PARAM_KEYS = ["caption", "version"]
 
 
-lib64 = os.path.join(PREFIX, "lib64")
-lib = os.path.join(PREFIX, "lib")
+lib64 = os.path.join(sysdirs['PREFIX'], "lib64")
+lib = os.path.join(sysdirs['PREFIX'], "lib")
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -1687,7 +1688,6 @@ oldLMP = os.path.join(OLD_CONFS, "local_machine.json")
 localMachineMetaPath = os.path.join(MY_CONFS, "local_machine.json")
 oldLP = os.path.join(OLD_CONFS, "install_any.log")
 logPath = os.path.join(MY_CONFS, "nopackage.log")
-PIXMAPS
 
 echo0('[nopackage] logPath="{}"'.format(logPath))
 
@@ -2148,10 +2148,10 @@ def install_program_in_place(src_path, **kwargs):
         program = os.path.split(found_programs_paths[0])[-1]
         this_programs_path = os.path.split(found_programs_paths[0])[0]
         this_programs = os.path.split(this_programs_path)[-1]
-        dst_programs = os.path.join(PREFIX, this_programs)
+        dst_programs = os.path.join(sysdirs['PREFIX'], this_programs)
         print("* found programs path in deb: '{}'".format(dst_programs))
 
-        if dst_programs == PREFIX:
+        if dst_programs == sysdirs['PREFIX']:
             print("ERROR: source programs directory (directory"
                   " containing {}) was not"
                   " detected in deb.".format(program_path))
@@ -2218,15 +2218,15 @@ def install_program_in_place(src_path, **kwargs):
             for root, dirs, files in os.walk(src_icons):
                 for sub_name in files:
                     sub_path = os.path.join(root, sub_name)
-                    icon_path = os.path.join(PIXMAPS, sub_name)
+                    icon_path = os.path.join(sysdirs['PIXMAPS'], sub_name)
                     addProgramValue(luid, 'icon_paths', icon_path)
                     if do_uninstall:
                         if os.path.isfile(icon_path):
                             os.remove(icon_path)
                             print("* removed '{}'".format(icon_path))
                     else:
-                        if not os.path.isdir(PIXMAPS):
-                            os.makedirs(PIXMAPS)
+                        if not os.path.isdir(sysdirs['PIXMAPS']):
+                            os.makedirs(sysdirs['PIXMAPS'])
                         try:
                             shutil.move(sub_path, icon_path)
                             print("* added '{}'".format(icon_path))
@@ -2244,7 +2244,7 @@ def install_program_in_place(src_path, **kwargs):
             if do_uninstall:
                 for root, dirs, files in os.walk(src_icons):
                     for sub_name in dirs:
-                        sub_path = os.path.join(PIXMAPS, sub_name)
+                        sub_path = os.path.join(sysdirs['PIXMAPS'], sub_name)
                         if not os.path.isdir(sub_path):
                             print("* WARNING: '{}' is already not"
                                   " present.".format(sub_path))
@@ -2532,8 +2532,8 @@ def install_program_in_place(src_path, **kwargs):
               ''.format(dirpath))
         this_programs_path = os.path.split(dirpath)[0]
         this_programs = os.path.split(this_programs_path)[-1]
-        dst_programs = os.path.join(PREFIX, this_programs)
-        if dst_programs == PREFIX:
+        dst_programs = os.path.join(sysdirs['PREFIX'], this_programs)
+        if dst_programs == sysdirs['PREFIX']:
             print("ERROR: source programs directory (directory"
                   " containing {}) was not"
                   " detected.".format(src_path))
@@ -2558,7 +2558,7 @@ def install_program_in_place(src_path, **kwargs):
           "".format(dirname))
 
     # luid = None
-    applications = os.path.join(SHARE, "applications")
+    applications = os.path.join(sysdirs['SHARE'], "applications")
     retetected_version_used = False
     if (casedName is None) or (version is None):
         retetected_version_used = True
@@ -2807,7 +2807,7 @@ def install_program_in_place(src_path, **kwargs):
     if icon_path is None:
         if os.path.isfile(try_included_icon):
             icon_name = os.path.split(try_included_icon)[1]
-            icon_path = os.path.join(PIXMAPS, icon_name)
+            icon_path = os.path.join(sysdirs['PIXMAPS'], icon_name)
             print('* copying "{}" to "{}"'
                   ''.format(try_included_icon, icon_path))
             shutil.copy(try_included_icon, icon_path)
@@ -2817,10 +2817,10 @@ def install_program_in_place(src_path, **kwargs):
             if icon_partial_name is not None:
                 icon_ext = os.path.splitext(icon_name)[-1]
                 icon_name = icon_partial_name + icon_ext
-            icon_path = os.path.join(PIXMAPS, icon_name)
+            icon_path = os.path.join(sysdirs['PIXMAPS'], icon_name)
             if not do_uninstall:
-                if not os.path.isdir(PIXMAPS):
-                    os.makedirs(PIXMAPS)
+                if not os.path.isdir(sysdirs['PIXMAPS']):
+                    os.makedirs(sysdirs['PIXMAPS'])
                 if os.path.isfile(icon_path):
                     if os.stat(icon_path).st_size == 0:
                         print("* removing bad 0-size icon \"{}\""
