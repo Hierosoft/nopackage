@@ -216,6 +216,7 @@ iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
 # Use new basilisk icon if using new version (discontinued by Moonchild then continued by Basilisk-Dev team):
 iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"
 iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"
+iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
@@ -228,9 +229,15 @@ iconNames = {
 # ^ A list of icon names where the downloaded file should be renamed.
 # ^ Also generated names are put here during module load!
 #   See `iconNames[luid] = noExt` above `del luid`
+
 minimumUniquePartOfLuid = {
     'unityhub': "unity",
 }
+
+known_luids = {
+    'stargatedaw': "stargate",  # appimage=stargatedaw others named stargate
+}
+
 hyphenate_names = [
     "ninja-ide",
 ]
@@ -368,6 +375,7 @@ casedNames = {  # A list of correct icon captions indexed by LUID
     'minetest': "Minetest",
     'multicraft': "MultiCraft",  # C only capitalized for game, not MC hosting
     'boscaceoil.blue': "Bosca Ceoil Blue",
+    'stargatedaw': "StargateDAW",
 }
 annotations = {  # Add a parenthetical to the shortcut caption.
     '.deb': "deb",
@@ -898,7 +906,11 @@ def test_subprocess_run(argsOrString):
 
 
 def toLUID(name):
-    return name.replace(" ", ".").lower()
+    luid = name.replace(" ", ".").lower()
+    known_luid = known_luids.get(luid)
+    if known_luid:
+        return known_luid
+    return luid
 
 
 def get_annotation(s):
