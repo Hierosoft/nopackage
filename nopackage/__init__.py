@@ -67,6 +67,16 @@ import copy
 from datetime import datetime
 import inspect
 
+if sys.version_info.major >= 3:
+    from urllib.parse import urlparse
+else:
+    import urlparse
+
+if __name__ == "__main__":
+    MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+    REPO_DIR = os.path.dirname(MODULE_DIR)
+    sys.path.insert(0, REPO_DIR)
+
 from nopackage.find_hierosoft import hierosoft  # noqa F401
 
 from hierosoft.moreweb import (
@@ -205,6 +215,7 @@ iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
 # iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"
 # Use new basilisk icon if using new version (discontinued by Moonchild then continued by Basilisk-Dev team):
 iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"
+iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
@@ -305,6 +316,13 @@ for rawLuid, url in iconLinks.items():
             lastSignI = fileName.rfind("?")
         fileName = fileName[lastSignI+1:]
     noExt, dotExt = os.path.splitext(fileName)
+    url_query_i = dotExt.rfind("?")
+    if url_query_i > -1:
+        dotExt = dotExt[:url_query_i-1]
+    if "?" in fileName:
+        raise NameError("? in icon name {}".format(fileName, dotExt))
+    if "?" in dotExt:
+        raise NameError("? in icon extension {}".format(fileName, dotExt))
     if not dotExt:
         echo0("Warning: No extension on <{}> from iconLinks. Assuming png."
               "".format(url))
@@ -349,6 +367,7 @@ casedNames = {  # A list of correct icon captions indexed by LUID
     'finetest': "Finetest",
     'minetest': "Minetest",
     'multicraft': "MultiCraft",  # C only capitalized for game, not MC hosting
+    'boscaceoil.blue': "Bosca Ceoil Blue",
 }
 annotations = {  # Add a parenthetical to the shortcut caption.
     '.deb': "deb",
@@ -381,6 +400,14 @@ Icon={Icon}
 Terminal=false
 Type=Application
 """
+
+
+def filename_from_url(url):
+    parsed = urlparse(url)
+    # ^ urllib.parse.ParseResult
+    path = parsed.path
+    directory, name = os.path.split(path)
+    return name
 
 
 def format_shortcut(shortcut_data, meta, path=None, add_all=True):
@@ -2388,13 +2415,14 @@ def install_program_in_place(src_path, **kwargs):
     if os.path.isdir(src_path):
         dirpath = src_path
         import struct
-        arch_suffix = "64"
+        arch_suffixes = ["64", ".x86_64"]
         if struct.calcsize('P') * 8 == 32:
-            arch_suffix = "32"
-        print("* trying to detect {}-bit binary...".format(arch_suffix))
+            arch_suffixes = ["32", ".x86"]
+        print("* trying to detect {} binary...".format(arch_suffixes))
         src_name = os.path.split(src_path)[-1]
         only_name = src_name.strip("-0123456789. ")
-        try_name = src_name.split("-")[0]
+        name_parts = src_name.split("-")
+        try_name = name_parts[0]
         try_names = []
         if src_name not in hyphenate_names:
             name_partial0 = src_name.split("-")[0]
@@ -2403,7 +2431,9 @@ def install_program_in_place(src_path, **kwargs):
         for name_partial in (name_partial0, name_partial0.lower()):
             try_names.append(name_partial + ".sh")
             try_names.append(name_partial + ".py")
-            try_names.append(name_partial + arch_suffix)
+            for arch_suffix in arch_suffixes:
+                try_names.append(name_partial + arch_suffix)
+                try_names.append(name_partial + "." + arch_suffix)
             # ^ sh takes priority in case environment vars are necessary
             try_names.append(name_partial)
             if len(src_name.split("-")) > 1:
@@ -2414,10 +2444,18 @@ def install_program_in_place(src_path, **kwargs):
             print("  name_partial: {}".format(name_partial))
 
         got_path = None
+        if len(name_parts) > 1:
+            try_names.append("-".join(name_parts[:2]))  # such as boscaceoil-blue
         try_paths = []
         for try_name in try_names:
             try_paths.append(os.path.join(src_path, "bin", try_name))
             try_paths.append(os.path.join(src_path, try_name))
+            for this_parent in (src_path, os.path.join(src_path, "bin")):
+                for sub in os.listdir(src_path):
+                    if sub.startswith(try_name + "-"):
+                        # Such as Godot programs such as "boscaceoil-blue.x86_64"
+                        # (since arch_suffixes fails when name itself has "-"
+                        try_paths.append(os.path.join(this_parent, sub))
         for try_path in try_paths:
             if os.path.isfile(try_path):
                 got_path = try_path
@@ -2815,7 +2853,8 @@ def install_program_in_place(src_path, **kwargs):
                   ''.format(try_included_icon, icon_path))
             shutil.copy(try_included_icon, icon_path)
         elif try_icon_url is not None:
-            icon_name = try_icon_url.split('/')[-1]
+            icon_name = filename_from_url(try_icon_url)
+            # icon_name = try_icon_url.split('/')[-1]
             icon_partial_name = iconNames.get(luid)
             if icon_partial_name is not None:
                 icon_ext = os.path.splitext(icon_name)[-1]
@@ -3413,6 +3452,29 @@ def install_program_in_place(src_path, **kwargs):
                 print("* installing '{}'...{}".format(sc_name, inst_msg))
             print("  Name={}".format(caption))
             print("  Exec={}".format(dst_bin_path))
+            if platform.system() != "Windows":
+                _, exeExt = os.path.splitext(dst_bin_path)
+                runners = {'.jar': "java", '.exe': "wine"}
+                runner = runners.get(exeExt.lower())
+                if not runner:
+                    # exe is *not* executable in non-Windows!
+                    #   it should open with wine or fail.
+                    sys.stderr.write("* marking \"{}\" as executable..."
+                                    "".format(dst_bin_path))
+                    os.chmod(dst_bin_path, stat.S_IRWXU | stat.S_IXGRP
+                            | stat.S_IRGRP
+                            | stat.S_IROTH | stat.S_IXOTH)
+                    print("OK", file=sys.stderr)
+                else:
+                    print(
+                        "Warning: {} icon may not appear in your menu"
+                        " because it is not an executable type."
+                        " The Exec may need to be added manually"
+                        " in the desktop file above to start with"
+                        " (full path to) {}."
+                        .format(dst_bin_path, runner),
+                        file=sys.stderr
+                    )
             logLn("dst_path:{}".format(dst_path))
             # logLn("install_shortcut:{}".format(sc_path))
             logLn("sc_path:{}".format(sc_path))
