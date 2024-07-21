@@ -202,6 +202,7 @@ elif platform.system() == "Darwin":
 # ^ 403 Forbidden unless using browser (maybe referrer is checked)
 # ^ Leave as None since luid-named file is in "shortcut-metadata" dir
 iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
+iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
