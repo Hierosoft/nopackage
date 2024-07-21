@@ -202,7 +202,9 @@ elif platform.system() == "Darwin":
 # ^ 403 Forbidden unless using browser (maybe referrer is checked)
 # ^ Leave as None since luid-named file is in "shortcut-metadata" dir
 iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
-iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"
+# iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"
+# Use new basilisk icon if using new version (discontinued by Moonchild then continued by Basilisk-Dev team):
+iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
