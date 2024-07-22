@@ -3278,8 +3278,17 @@ def install_program_in_place(src_path, **kwargs):
         if os.path.split(tryBinDir)[1] == 'bin':
             # Try examining the local directory (such as a venv) for
             # matching metadata.
+            # TODO: Do this for all packages, not just ones with "bin"?
             tryVenv = os.path.dirname(tryBinDir)
-            tryIconsDirs = [
+            tryIconsDirs = [  # last is preferred
+                os.path.join(tryVenv, "share", "icons", "hicolor", "32x32",
+                             "apps"),
+                os.path.join(tryVenv, "share", "icons", "hicolor", "48x48",
+                             "apps"),
+                os.path.join(tryVenv, "share", "icons", "hicolor", "128x128",
+                             "apps"),
+                os.path.join(tryVenv, "share", "icons", "hicolor", "scalable",
+                             "apps"),  # such as org.zrythm.Zrythm.svg
                 os.path.join(tryVenv, "share", "icons"),  # virtualenv
                 os.path.join(tryVenv, "misc"),  # minetest
             ]
