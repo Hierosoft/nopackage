@@ -166,6 +166,18 @@ platform_luid_local_icons = {
     },
 }
 
+platform_icon_dot_exts = {
+    "Linux": [".png", ".bmp", ".svg"],
+    "Darwin": [".icns"],
+    "Windows": [".ico", ".bmp", ".png"],
+}
+
+ICON_DOT_EXTS = platform_icon_dot_exts.get(platform.system())
+if ICON_DOT_EXTS is None:
+    ICON_DOT_EXTS = [".png"]
+    print("[nopackage] Warning: No know icon formats for {}. Reverted to {}."
+          .format(platform.system(), ICON_DOT_EXTS), file=sys.stderr)
+
 # The following dictionaries contain information that can't be derived
 # from the installer file's name.
 icons = {}  # A list of preferred icon file names indexed by LUID
@@ -3232,11 +3244,21 @@ def install_program_in_place(src_path, **kwargs):
             else:
                 known_icons = []
             tryIconsDirPresentCount = 0
+
             for tryIconsDir in tryIconsDirs:
                 if not os.path.isdir(tryIconsDir):
                     continue
                 tryIconsDirPresentCount += 1
-                tryIcons = os.listdir(tryIconsDir)
+                tryIcons = []
+                for _tryIcon in os.listdir(tryIconsDir):
+                    _tryIconPath = os.path.join(tryIconsDir, _tryIcon)
+                    if not os.path.isfile(_tryIconPath):
+                        continue
+                    _, _tryIconExt = os.path.splitext(_tryIconPath)
+                    if _tryIconExt.lower() not in ICON_DOT_EXTS:
+                        continue
+                    tryIcons.append(_tryIcon)
+
                 known_icon = None
                 for tryKnownIcon in known_icons:
                     if tryKnownIcon in tryIcons:
