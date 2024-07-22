@@ -380,6 +380,39 @@ Type=Application
 """
 
 
+def mark_executable(path, silent=False, reraise=False):
+    """Allow all permissions for user,
+    but group & others can only execute & read.
+    """
+    try:
+        os.chmod(path, (stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
+                        | stat.S_IROTH | stat.S_IXOTH))
+        return True
+    except PermissionError as ex:
+        # PermissionError: [Errno 1] Operation not permitted
+        if not silent:
+            print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
+        if reraise:
+            raise
+    return False
+
+
+def mark_user_shared(path, silent=False, reraise=False):
+    """Mark writable by user and readable by others"""
+    try:
+        os.chmod(path, (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
+                        | stat.S_IWUSR))
+        # S_IREAD: "Unix V7 synonym for S_IRUSR."
+        return True
+    except PermissionError as ex:
+        # PermissionError: [Errno 1] Operation not permitted
+        if not silent:
+            print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
+        if reraise:
+            raise
+    return False
+
+
 def format_shortcut(shortcut_data, meta, path=None, add_all=True):
     '''
     Change or add data to the XDG desktop format data.
@@ -2874,11 +2907,22 @@ def install_program_in_place(src_path, **kwargs):
     if try_dst_dirpath is not None:
         dst_dirpath = try_dst_dirpath
         if dst_dirpath != src_path:
-            move_what = 'directory'
-            print("* dst_dirpath '{}' != src_path '{}' and is set in {}"
-                  " so move_what will be '{}'."
-                  "".format(dst_dirpath, src_path,
-                            localMachineMetaPath, move_what))
+            if move_what is None:
+                if os.path.isdir(src_path):
+                    move_what = 'directory'
+                else:
+                    move_what = 'file'
+                print("* dst_dirpath '{}' != src_path '{}' and is set in {}"
+                      " so move_what will be '{}'."
+                      "".format(dst_dirpath, src_path,
+                                localMachineMetaPath, move_what))
+            else:
+                print("* dst_dirpath '{}' != src_path '{}' and is set in {}"
+                      " but move_what will be '{}' due to"
+                      " current command options."
+                      "".format(dst_dirpath, src_path,
+                                localMachineMetaPath, move_what))
+
         else:
             print("* try_dst_path '{}' == src_path '{}' and is set in"
                   " {} so move_what will remain as '{}'."
@@ -3119,9 +3163,12 @@ def install_program_in_place(src_path, **kwargs):
         sys.stderr.write("* marking \"{}\" as executable..."
                          "".format(dst_path))
         sys.stderr.flush()
-        os.chmod(dst_path, stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
-                 | stat.S_IROTH | stat.S_IXOTH)
-        sys.stderr.write("OK\n")
+        if mark_executable(dst_path):
+            sys.stderr.write("OK\n")
+        else:
+            # Should already have shown an error.
+            pass
+            # sys.stderr.write("FAILED\n")
         sys.stderr.flush()
         # stat.S_IRWXU : Read, write, and execute by owner
         # stat.S_IEXEC : Execute by owner
@@ -3395,17 +3442,23 @@ def install_program_in_place(src_path, **kwargs):
                     # fix the deprecated (which was also faulty) value
                     # (was accidentally set to dst_path in older versions).
                     deleteProgramValue(luid, 'install_shortcut', sc_path)
-                os.chmod(sc_path,
-                         (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
-                          | stat.S_IWUSR))
-                print("* installing '{}'...{}".format(sc_path,
-                                                      inst_msg))
+                sys.stderr.write("* marking \"{}\" readable...".format(sc_path))
+                if mark_user_shared(sc_path):
+                    sys.stderr.write("OK\n")
+                    sys.stderr.flush()
+                else:
+                    # Should already have shown an error.
+                    pass
+
+                print("* installing '{}'...{}".format(sc_path, inst_msg))
                 sys.stderr.write("* marking \"{}\" as executable..."
                                  "".format(dst_path))
-                os.chmod(dst_path, stat.S_IRWXU | stat.S_IXGRP
-                         | stat.S_IRGRP
-                         | stat.S_IROTH | stat.S_IXOTH)
-                sys.stderr.write("OK\n")
+                if mark_executable(dst_path):
+                    sys.stderr.write("OK\n")
+                    sys.stderr.flush()
+                else:
+                    # Should already have shown an error.
+                    pass
             else:
                 print("* installing '{}'...{}".format(sc_name, inst_msg))
             print("  Name={}".format(caption))
