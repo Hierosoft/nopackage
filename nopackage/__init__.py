@@ -70,7 +70,7 @@ import inspect
 if sys.version_info.major >= 3:
     from urllib.parse import urlparse
 else:
-    import urlparse
+    import urlparse  # type: ignore
 
 if __name__ == "__main__":
     MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -198,29 +198,29 @@ icons = {}  # A list of preferred icon file names indexed by LUID
 icons["freecad"] = "org.freecadweb.FreeCAD"
 icons["ultimaker.cura"] = "cura"
 iconLinks = {}  # A list URLs to icon graphics indexed by LUID
-iconLinks["ultimaker.cura"] = "https://github.com/Ultimaker/Cura/raw/master/icons/cura-48.png"
-iconLinks["prusaslicer"] = "https://github.com/prusa3d/PrusaSlicer/raw/master/resources/icons/PrusaSlicer.png"
-iconLinks["pycharm.community"] = "https://github.com/JetBrains/intellij-community/raw/master/python/resources/PyCharmCore128.png"
-iconLinks["keepassxc"] = "https://github.com/keepassxreboot/keepassxc/raw/develop/share/icons/application/scalable/apps/keepassxc.svg"
+iconLinks["ultimaker.cura"] = "https://github.com/Ultimaker/Cura/raw/master/icons/cura-48.png"  # noqa: E501
+iconLinks["prusaslicer"] = "https://github.com/prusa3d/PrusaSlicer/raw/master/resources/icons/PrusaSlicer.png"  # noqa: E501
+iconLinks["pycharm.community"] = "https://github.com/JetBrains/intellij-community/raw/master/python/resources/PyCharmCore128.png"  # noqa: E501
+iconLinks["keepassxc"] = "https://github.com/keepassxreboot/keepassxc/raw/develop/share/icons/application/scalable/apps/keepassxc.svg"  # noqa: E501
 iconLinks["unityhub"] = "https://img.icons8.com/ios-filled/50/000000/unity.png"
-iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"
-iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"
-iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"
+iconLinks["godot"] = "https://github.com/godotengine/godot/raw/master/main/app_icon.png"  # noqa: E501
+iconLinks["ninja-ide"] = "https://github.com/ninja-ide/ninja-ide/raw/develop/icon.png"  # noqa: E501
+iconLinks["olive"] = "https://upload.wikimedia.org/wikipedia/commons/c/c7/Olive_Video_Editor_Logo.png"  # noqa: E501
 # pronterface.py and pronsole.py are installed to bin by pip via
-#    mkdir -p cd ~/Downloads/git/kliment && cd ~/Downloads/git/kliment && git clone https://github.com/kliment/Printrun
-#    cd Printrun && git pull && cd .. && python3 -m pip install --user --upgrade Printrun
-iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.png"
-iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"
-iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.png"
-iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.png"
-iconLinks['pcsx2'] = "https://github.com/PCSX2/pcsx2/raw/master/bin/resources/icons/AppIconLarge.png"
+#    mkdir -p cd ~/Downloads/git/kliment && cd ~/Downloads/git/kliment && git clone https://github.com/kliment/Printrun  # noqa: E501
+#    cd Printrun && git pull && cd .. && python3 -m pip install --user --upgrade Printrun  # noqa: E501
+iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.png"  # noqa: E501
+iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.png"  # noqa: E501
+iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.png"  # noqa: E501
+iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.png"  # noqa: E501
+iconLinks['pcsx2'] = "https://github.com/PCSX2/pcsx2/raw/master/bin/resources/icons/AppIconLarge.png"  # noqa: E501
 if platform.system() == "Windows":
-    iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"
-    iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"
-    iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.ico"
-    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.ico"
+    iconLinks['pronterface'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronterface.ico"  # noqa: E501
+    iconLinks['pronsole'] = "https://raw.githubusercontent.com/kliment/Printrun/master/pronsole.ico"  # noqa: E501
+    iconLinks['plater'] = "https://raw.githubusercontent.com/kliment/Printrun/master/plater.ico"  # noqa: E501
+    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.ico"  # noqa: E501
 elif platform.system() == "Darwin":
-    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.icns"
+    iconLinks['balenaetcher'] = "https://github.com/balena-io/etcher/blob/master/assets/icon.icns"  # noqa: E501
 # iconLinks["mirage"] = "mirage.png" # None since in "shortcut-metadata"
 # noqa E501 iconLinks['qortal'] = "https://wiki.qortal.org/lib/exe/fetch.php?cache=&media=qortal_official_icon_transparent_.png"
 # ^ Not square unless cropped
@@ -228,11 +228,11 @@ elif platform.system() == "Darwin":
 # ^ 403 Forbidden unless using browser (maybe referrer is checked)
 # ^ Leave as None since luid-named file is in "shortcut-metadata" dir
 iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
-# iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"
-# Use new basilisk icon if using new version (discontinued by Moonchild then continued by Basilisk-Dev team):
-iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"
-iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"
-iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"
+# iconLinks['basilisk'] = "https://github.com/JustOff/Basilisk/blob/master/basilisk/branding/official/default48.png?raw=true"  # noqa: E501
+# Use new basilisk icon if using new version (discontinued by Moonchild then continued by Basilisk-Dev team):  # noqa: E501
+iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"  # noqa: E501
+iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"  # noqa: E501
+iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"  # noqa: E501
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
@@ -258,7 +258,7 @@ known_luids = {
 hyphenate_names = [
     "ninja-ide",
 ]
-# Store desktop file values (execpt Icon--see iconLinks above):
+# Store desktop file values (except Icon--see iconLinks above):
 shortcutMetas = {
     'argouml': {
         'Keywords': "Development;IDE;",
@@ -344,9 +344,9 @@ for rawLuid, url in iconLinks.items():
     if url_query_i > -1:
         dotExt = dotExt[:url_query_i-1]
     if "?" in fileName:
-        raise NameError("? in icon name {}".format(fileName, dotExt))
+        raise NameError("? in icon name {}{}".format(fileName, dotExt))
     if "?" in dotExt:
-        raise NameError("? in icon extension {}".format(fileName, dotExt))
+        raise NameError("? in icon extension {}{}".format(fileName, dotExt))
     if not dotExt:
         echo0("Warning: No extension on <{}> from iconLinks. Assuming png."
               "".format(url))
@@ -1157,7 +1157,7 @@ def is_version(s, allowLettersAtEnd, allowMore=None):
 
     Keyword arguments:
     allowMore -- a list such as PackageInfo.VPARTS of entire words to
-        allow (case-insensive) such as "master" or "dev"
+        allow (case-insensitive) such as "master" or "dev"
     '''
     # if s.lower in version_strings:
     if allowMore is not None:
@@ -1342,7 +1342,7 @@ class PackageInfo:
         "sdl_image",
         "sdl_mixer",
         "setup",
-        "smpeg",
+        # "smpeg",
         "sys",
         "thanks",
         "third-party-notices",
@@ -1362,7 +1362,6 @@ class PackageInfo:
     #   ~/git/dockapps/washerdryer/washerDryer/wdryerrc
     #   (conf file format)
 
-
     verbosity = 1
     NO_VER_FLAG = "The end of the program name"
 
@@ -1376,12 +1375,12 @@ class PackageInfo:
         arch -- 64bit or 32bit, to match the first element in the tuple
             returned by Python's platform.architecture(). If no
             delimited segment of the filename is in X64S or X32S, the
-            arch will be None after the contructor call.
+            arch will be None after the constructor call.
 
         platform -- uppercase platform such as "Linux" or "Windows"
             to match the output of Python's platform.system(). If no
             delimited segment of the filename is in LINS or WINS, the
-            platform will be None after the contructor call.
+            platform will be None after the constructor call.
 
         casedName -- The casedName is the human-readable name without
             the version, possibly including uppercase and spaces
@@ -1517,7 +1516,7 @@ class PackageInfo:
         if len(parts) < 2:
             # re-split
             tmpParts = fnamePartial.split(".")
-            parts, versionI = PackageInfo.unsplit_version(tmpParts)
+            parts, versionI = PackageInfo.join_version(tmpParts)
             print("* split {} into {} len {} (version is at [{}])"
                   "".format(fnamePartial, tmpParts, len(tmpParts),
                             versionI))
@@ -1557,12 +1556,12 @@ class PackageInfo:
                 elif partL in PackageInfo.WINS:
                     self.platform = "Windows"
                     platformI = i
-            parts, versionI = PackageInfo.unsplit_version(
+            parts, versionI = PackageInfo.join_version(
                 parts,
                 oldDelimiters=oldDelimiters
             )
-            # ^ still do unsplit_version, because the version may be
-            #   multiple parts such as in ['Slic3r', '1.3.1', 'dev']
+            # ^ still do join_version, because the version may be
+            # #   multiple parts such as in ['Slic3r', '1.3.1', 'dev']
             del i
         if (len(parts) < 2) and (self.version is None):
             if not self.dry_run:
@@ -1580,7 +1579,7 @@ class PackageInfo:
         if self.version is None:
             # INFO: Any "v" prefix was already removed and multi-part
             #       versions were already un-split into one part
-            #       using unsplit_version (in re-split code or the
+            #       using join_version (in re-split code or the
             #       `else` case).
             if versionI > -1:
                 self.version = parts[versionI]
@@ -1696,11 +1695,10 @@ class PackageInfo:
                               "".format(encode_py_val(suffix)))
 
     # @classmethod
-    # def unsplitArch(cls, tmpParts):
+    # def joinArch(cls, tmpParts):
 
     @classmethod
-    def unsplit_version(cls, tmpParts, TwoOnly=False,
-                        oldDelimiters=None):
+    def join_version(cls, tmpParts, TwoOnly=False, oldDelimiters=None):
         '''
         Get a ([], int) tuple of (parts, versionI) where versionI is the
         index of the version and parts is the same list except where the
@@ -1711,19 +1709,19 @@ class PackageInfo:
 
         Sequential arguments:
         cls -- Class (Don't specify this--Call
-            PackageInfo.unsplit_version to prepend the class)
+            PackageInfo.join_version to prepend the class)
         TwoOnly -- Combine everything before the version and after the
             start of the version.
         oldDelimiters -- Add old delimiters back when un-splitting.
         '''
-        fn = 'unsplit_version'
+        fn = 'join_version'
         firstNumI = -1
         lastNumI = -1
         letteredI = -1
         versionI = -1
         parts = tmpParts
         if PackageInfo.verbosity > 1:
-            print("[unsplit_version] tmpParts={}".format(tmpParts))
+            print("[join_version] tmpParts={}".format(tmpParts))
         if not hasattr(tmpParts, 'append'):
             raise ValueError("tmpParts must be a list but is {}"
                              "".format(tmpParts))
@@ -1734,10 +1732,10 @@ class PackageInfo:
                               PackageInfo.VPARTS):
                     tmpParts[i] = tmpParts[i][1:]
                     if PackageInfo.verbosity > 1:
-                        print("  * unsplit_version removed a 'v'")
+                        print("  * join_version removed a 'v'")
                 else:
                     if PackageInfo.verbosity > 1:
-                        print("  * unsplit_version kept a 'v'")
+                        print("  * join_version kept a 'v'")
             tmpPart = tmpParts[i]
             if is_version(tmpPart, False, PackageInfo.VPARTS):
                 if PackageInfo.verbosity > 1:
@@ -1917,7 +1915,6 @@ else:
 localMachine = {
     'programs': {}
 }
-
 
 
 def fillProgramMeta(programMeta):
@@ -2129,7 +2126,7 @@ def install_program_in_place(src_path, **kwargs):
         'directory' (or None to move nothing). The file or directory
         will be moved to ~/.local/lib64/ (or whatever programs
         directory is detected as a parent of the directory if
-        detect_program_parent is True [automaticaly True by calling
+        detect_program_parent is True [automatically True by calling
         itself in the case of deb]). move_what='file' example: If name
         is not specified, the name and version will be calculated from
         either the filename at src_path or the path's parent
@@ -2488,7 +2485,7 @@ def install_program_in_place(src_path, **kwargs):
             caption = pkginfo.caption
         if luid is None:
             luid = pkginfo.luid
-        # ^ luid may be changed again is multiversion or other reasons.
+        # ^ luid may be changed again is multiVersion or other reasons.
         #   Don't use it before the finalize_luid() call.
         suffix = pkginfo.suffix
         # ^ Get the info now, because the extracted directory name will
@@ -2627,7 +2624,7 @@ def install_program_in_place(src_path, **kwargs):
 
         got_path = None
         if len(name_parts) > 1:
-            try_names.append("-".join(name_parts[:2]))  # such as boscaceoil-blue
+            try_names.append("-".join(name_parts[:2]))  # e.g. boscaceoil-blue
         try_paths = []
         for try_name in try_names:
             try_paths.append(os.path.join(src_path, "bin", try_name))
@@ -2635,7 +2632,7 @@ def install_program_in_place(src_path, **kwargs):
             for this_parent in (src_path, os.path.join(src_path, "bin")):
                 for sub in os.listdir(src_path):
                     if sub.startswith(try_name + "-"):
-                        # Such as Godot programs such as "boscaceoil-blue.x86_64"
+                        # Such as Godot programs ("boscaceoil-blue.x86_64" etc)
                         # (since arch_suffixes fails when name itself has "-"
                         try_paths.append(os.path.join(this_parent, sub))
         for try_path in try_paths:
@@ -2801,9 +2798,9 @@ def install_program_in_place(src_path, **kwargs):
 
     # luid = None
     applications = os.path.join(sysdirs['SHARE'], "applications")
-    retetected_version_used = False
+    redetected_version_used = False
     if (casedName is None) or (version is None):
-        retetected_version_used = True
+        redetected_version_used = True
         echo0("* casedName:{} version:{} () so detecting..."
               "".format(casedName, version))
         # try_names = [filename, dirname]
@@ -2878,7 +2875,7 @@ def install_program_in_place(src_path, **kwargs):
             if thisPkg.luid is not None:
                 if luid is None:
                     luid = thisPkg.luid
-    if not retetected_version_used:
+    if not redetected_version_used:
         print("* The known casedName is \"{}\"".format(casedName))
         print("* The known version is \"{}\"".format(version))
         print("* The known luid is \"{}\"".format(luid))
@@ -3026,7 +3023,7 @@ def install_program_in_place(src_path, **kwargs):
         if installed_sc_path is not None:
             sc_path = installed_sc_path
             sc_name = os.path.split(sc_path)[1]
-            # FIXME: sc_name is used as luid if multiversion!
+            # FIXME: sc_name is used as luid if multiVersion!
             #   (See further down where sc_path is saved)
         if installed_luid is not None:
             if getProgramValue(luid, 'dst_path') is None:
@@ -3673,7 +3670,8 @@ def install_program_in_place(src_path, **kwargs):
                     # fix the deprecated (which was also faulty) value
                     # (was accidentally set to dst_path in older versions).
                     deleteProgramValue(luid, 'install_shortcut', sc_path)
-                sys.stderr.write("* marking \"{}\" readable...".format(sc_path))
+                sys.stderr.write("* marking \"{}\" readable..."
+                                 .format(sc_path))
                 if mark_user_shared(sc_path):
                     sys.stderr.write("OK\n")
                     sys.stderr.flush()
@@ -3701,11 +3699,13 @@ def install_program_in_place(src_path, **kwargs):
                 if not runner:
                     # exe is *not* executable in non-Windows!
                     #   it should open with wine or fail.
-                    sys.stderr.write("* marking \"{}\" as executable..."
-                                    "".format(dst_bin_path))
-                    os.chmod(dst_bin_path, stat.S_IRWXU | stat.S_IXGRP
-                            | stat.S_IRGRP
-                            | stat.S_IROTH | stat.S_IXOTH)
+                    sys.stderr.write(
+                        "* marking \"{}\" as executable..."
+                        .format(dst_bin_path))
+                    os.chmod(
+                        dst_bin_path, stat.S_IRWXU | stat.S_IXGRP
+                        | stat.S_IRGRP
+                        | stat.S_IROTH | stat.S_IXOTH)
                     print("OK", file=sys.stderr)
                 else:
                     print(
