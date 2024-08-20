@@ -105,6 +105,10 @@ from hierosoft.ggrep import (
     # contains,
 )
 
+from hierosoft.logging2 import getLogger
+
+logger = getLogger(__name__)
+
 __license__ = '''
 nopackage tries to install any folder or archived binary package.
 Copyright (C) 2019  Jake "Poikilos" Gustafson
@@ -248,6 +252,7 @@ minimumUniquePartOfLuid = {
 
 known_luids = {
     'stargatedaw': "stargate",  # appimage=stargatedaw others named stargate
+    'descent3.release': "descent3",
 }
 
 hyphenate_names = [
@@ -395,7 +400,7 @@ annotations = {  # Add a parenthetical to the shortcut caption.
 }
 
 
-known_binaries = ["RunAwesomeBump.sh"]
+known_binaries = ["RunAwesomeBump.sh", "monero-wallet-gui"]
 # ^ Allows finding the name in edge cases
 #   (The version and name aren't separable in
 #   AwesomeBumpV5.Bin64Linux.tar.gz)
@@ -1251,6 +1256,113 @@ class PackageInfo:
         "32",  # such as Godot 32-bit
         "64",  # such as Godot 64-bit
     ]
+    NON_BIN_EXTS = [
+        "txt",
+        "md",
+        "doc",
+    ]
+
+    NON_BIN_NOEXTS = [  # exclude these regardless of ext since '' in BIN_EXTS
+        "00readme",
+        "__base__",
+        "_htaccess",
+        "announce",
+        "authors",
+        "beans",
+        "build",
+        "build-noout",
+        "changelog",
+        "clean",
+        "codeowners",
+        "config_list",
+        "configure",
+        "contribute",
+        "contributing",
+        "contributors",
+        "control",
+        "copying",
+        "copyright",
+        "credits",
+        "crontab",
+        "current",
+        "defaults",
+        "depend",
+        "description",
+        "dirs",
+        "dockerfile",
+        "docs",
+        "doxyfile",
+        "envvars",
+        "example",
+        "examples",
+        "exclude",
+        "faq",
+        "features",
+        "flac",
+        "frameworks",
+        "gpl",
+        "greetings",
+        "head",
+        "help idx",
+        "hints",
+        "history",
+        "imakefile",
+        "install",
+        "jsapi",
+        "license",
+        "license-gpl",
+        "license-mit",
+        "license-universities",
+        # "linguas",
+        "makefile",
+        "makefile2",
+        "mikmod",
+        "mit-license",
+        # "news",
+        # "notes",
+        "ogg",
+        "p1",
+        "preamble",
+        "pkgbuild",
+        "pkginfo",
+        "pkg-info",
+        "podfile",
+        "preferences",
+        "prefix",
+        "quickstart",
+        "readme",
+        "refs",
+        "rules",
+        "runme_before_automake",
+        "schema",
+        "sconscript",
+        "sconstruct",
+        "scsub",
+        "sdl",
+        "sdl_image",
+        "sdl_mixer",
+        "setup",
+        "smpeg",
+        "sys",
+        "thanks",
+        "third-party-notices",
+        "tkinter",
+        "todo",
+        "todos",
+        "update-ccache",
+        "updating",
+        "users",
+        "version",
+        "vorbis",
+        "yargs",
+        "zip-safe",
+        "zram",
+    ]  # some were discovered by ~/git/find-no-ext.py | sort
+    # TODO: do something about docker rc files such as
+    #   ~/git/dockapps/washerdryer/washerDryer/wdryerrc
+    #   (conf file format)
+
+
     verbosity = 1
     NO_VER_FLAG = "The end of the program name"
 
@@ -1291,6 +1403,9 @@ class PackageInfo:
             construction of the object, but makes error(s) more clear.
         '''
         raw_src_path = src_path
+        original_src = kwargs.get('original_src')
+        if not original_src:
+            original_src = raw_src_path
         print("[PackageInfo __init__] * checking src_path {}..."
               "".format(src_path))
         if PackageInfo.verbosity > 0:
@@ -1458,7 +1573,7 @@ class PackageInfo:
                                  " {} {} --version x"
                                  "".format(PackageInfo.DELIMITERS,
                                            encode_py_val(fnamePartial),
-                                           me, sh_literal(src_path)))
+                                           me, sh_literal(original_src)))
             else:
                 echo0("WARNING: no version is in {}"
                       "".format(fnamePartial))
@@ -2038,7 +2153,14 @@ def install_program_in_place(src_path, **kwargs):
     luid -- This is the unique program name without the version, with
         dots instead of spaces and all lowercase. It is detected
         automatically from the file or directory name if None.
+
+    original_src (str): The original src arg passed by the caller, for
+        generating accurate instructions in case of errors.
+        Defaults to src_path.
     """
+    original_src = kwargs.get('original_src')
+    if not original_src:
+        original_src = src_path
     unfinalize_luid()
     version = kwargs.get("version")
     if version is not None:
@@ -2354,6 +2476,7 @@ def install_program_in_place(src_path, **kwargs):
             casedName=casedName,
             version=version,
             caption=caption,
+            original_src=original_src,
         )
         # ^ Do NOT specify is_dir (The program must exist since it was
         #   extracted from a package)
@@ -2386,6 +2509,7 @@ def install_program_in_place(src_path, **kwargs):
             enable_reinstall=enable_reinstall,
             detect_program_parent=True,
             pull_back=pull_back,
+            original_src=original_src,
         )
         shutil.rmtree(next_temp)
         print("* removed '{}'".format(next_temp))
@@ -2411,6 +2535,7 @@ def install_program_in_place(src_path, **kwargs):
                     casedName=casedName,
                     version=version,
                     caption=caption,
+                    original_src=original_src,
                 )
                 # ^ Do NOT specify is_dir
                 if casedName is None:
@@ -2530,6 +2655,12 @@ def install_program_in_place(src_path, **kwargs):
                 ext = os.path.splitext(sub)[1].strip(".")
                 if sub.startswith("."):
                     continue
+                if ext.lower() in PackageInfo.NON_BIN_EXTS:
+                    continue
+                if sub.lower() in PackageInfo.NON_BIN_NOEXTS:
+                    # exclude these regardless of ext since '' in BIN_EXTS
+                    #   (such as "LICENSE")
+                    continue
                 if os.path.isdir(sub_path):
                     print("  - \"{}\" is a directory".format(sub))
                     continue
@@ -2537,6 +2668,13 @@ def install_program_in_place(src_path, **kwargs):
                     jars.append(sub)
                 elif ext in PackageInfo.BIN_EXTS:
                     scripts.append(sub)
+                    logger.warning(
+                        "Adding \"{}\" since in {}"
+                        .format(sub, PackageInfo.BIN_EXTS))
+                elif not os.access(sub_path, os.X_OK):
+                    logger.warning(
+                        "SKIPPED \"{}\" since not executable, jar, nor {}."
+                        .format(sub_path, PackageInfo.BIN_EXTS))
             if len(scripts) >= 2:
                 bad_indices = []
                 good_indices = []
@@ -2544,7 +2682,7 @@ def install_program_in_place(src_path, **kwargs):
                     script = scripts[i]
                     if script.startswith(only_name):
                         good_indices.append(i)
-                    elif script == "monero-wallet-gui":
+                    elif script in known_binaries:
                         good_indices.append(i)
                     else:
                         bad_indices.append(i)
@@ -2565,11 +2703,17 @@ def install_program_in_place(src_path, **kwargs):
                 if lName.startswith(os.path.splitext(lName)):
                     # if has something like argouml.sh and
                     # argouml2.sh (experimental), use argouml.sh.
+                    logger.warning(
+                        "Excluding \"{}\" icon since longer than \"{}\""
+                        .format(scripts[long_i], scripts[short_i]))
                     del scripts[long_i]
             if len(scripts) > 1:
                 for known_binary in known_binaries:
                     if known_binary in scripts:
                         scripts = [known_binary]
+                        logger.warning(
+                            "Choosing {} since it is a known_binary name"
+                            .format(scripts[0]))
                         break
             if len(jars) > 0:
                 enable_force_script = True
@@ -2632,7 +2776,7 @@ def install_program_in_place(src_path, **kwargs):
         this_programs = os.path.split(this_programs_path)[-1]
         dst_programs = os.path.join(sysdirs['PREFIX'], this_programs)
         if dst_programs == sysdirs['PREFIX']:
-            print("ERROR: source programs directory (directory"
+            echo0("ERROR: source programs directory (directory"
                   " containing {}) was not"
                   " detected.".format(src_path))
             if ex_tmp is not None:
@@ -2643,9 +2787,9 @@ def install_program_in_place(src_path, **kwargs):
                 if os.path.isdir(new_tmp):
                     shutil.rmtree(new_tmp)
                     print("* removed '{}'".format(new_tmp))
-            print("")
-            print("{} did not complete.".format(verb.title()))
-            print("")
+            echo0("")
+            echo0("{} did not complete.".format(verb.title()))
+            echo0("")
             exit(1)
 
     print("* using programs path: '{}'".format(dst_programs))
@@ -2660,7 +2804,7 @@ def install_program_in_place(src_path, **kwargs):
     retetected_version_used = False
     if (casedName is None) or (version is None):
         retetected_version_used = True
-        echo1("* casedName:{} version:{} () so detecting..."
+        echo0("* casedName:{} version:{} () so detecting..."
               "".format(casedName, version))
         # try_names = [filename, dirname]
         # echo1("* detecting name and version from {}".format(src_path))
@@ -2673,7 +2817,8 @@ def install_program_in_place(src_path, **kwargs):
         pkg = None
         pkgs = []
         echo0("* detecting name and version from any of {}"
-              "".format(try_sources))
+              " (including src_path=\"{}\")"
+              "".format(try_sources, src_path))
         for try_src_i in range(len(try_sources)):
             try_source = try_sources[try_src_i]
             echo0("[install_program_in_place] * try_sources[{}] {}"
@@ -2686,6 +2831,7 @@ def install_program_in_place(src_path, **kwargs):
                 caption=caption,
                 is_dir=is_dir,
                 do_uninstall=do_uninstall,
+                original_src=original_src,
             )
             pkgs.append(thisPkg)
             if thisPkg.version is not None:
