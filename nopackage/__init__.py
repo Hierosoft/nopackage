@@ -71,6 +71,9 @@ if sys.version_info.major >= 3:
     from urllib.parse import urlparse
 else:
     import urlparse  # type: ignore
+    # import errno
+    FileExistsError = OSError  # if ex.errno == errno.EEXIST
+    ModuleNotFoundError = ImportError
 
 if __name__ == "__main__":
     MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -82,6 +85,10 @@ from nopackage.find_hierosoft import hierosoft  # noqa F401
 from hierosoft.moreweb import (
     # request,
     download,
+)
+
+from hierosoft.moreplatform import (
+    which_pixmap,
 )
 
 from hierosoft import (  # noqa F401
@@ -106,6 +113,7 @@ from hierosoft.ggrep import (
 )
 
 from hierosoft.logging2 import getLogger
+
 
 logger = getLogger(__name__)
 
@@ -3218,9 +3226,10 @@ def install_program_in_place(src_path, **kwargs):
             dst_bin_path = dst_path
             pass
         else:
-            print("WARNING: The path is a file but move_what is"
-                  " 'directory' so the dst_dirpath {} may not be correct."
-                  "".format(encode_py_val(dst_dirpath)))
+            print(
+                "WARNING: The path {} is a file but move_what is"
+                " 'directory' so the dst_dirpath {} may not be correct."
+                .format(encode_py_val(src_path), encode_py_val(dst_dirpath)))
 
     echo1("move_what: {}".format(encode_py_val(move_what)))
     '''
@@ -3321,14 +3330,17 @@ def install_program_in_place(src_path, **kwargs):
                 setPackageValue(sc_name, 'installed', False)
         else:
             print("mv '{}' '{}'".format(dirpath, dst_dirpath))
-            if os.path.isdir(dst_dirpath):
+            if os.path.isdir(dst_dirpath) and (dirpath != dst_dirpath):
                 if enable_reinstall:
                     shutil.rmtree(dst_dirpath)
                 else:
-                    logLn("ERROR: '{}' already exists."
-                          " Use the reinstall command"
-                          " to ERASE the entire directory!"
-                          "".format(dst_dirpath))
+                    error = (
+                        "ERROR: '{}' already exists."
+                        " Use the reinstall command"
+                        " to ERASE the entire directory!"
+                        .format(dst_dirpath)
+                    )
+                    raise FileExistsError(error)
                     return False
             if os.path.isfile(src_path):
                 bin_name = os.path.split(src_path)[-1]
@@ -3336,8 +3348,8 @@ def install_program_in_place(src_path, **kwargs):
                 echo1("* set dst_bin_path to \"{}\" since src_path"
                       " was a file."
                       "".format(dst_bin_path))
-
-            shutil.move(dirpath, dst_dirpath)
+            if dirpath != dst_dirpath:
+                shutil.move(dirpath, dst_dirpath)
             logLn("install_move_dir:{}".format(dst_dirpath))
     else:
         if os.path.isdir(src_path):
@@ -3390,7 +3402,29 @@ def install_program_in_place(src_path, **kwargs):
         # stat.S_IXOTH : Execute by others
 
     if icon_path is None:
-        icon_path = luid
+        if which_pixmap(luid):
+            icon_path = luid
+        else:
+            try_icons = [
+                "preferences-system-windows",  # similar to xfwm4
+                "gnome-window-manager",  # similar to xfwm4
+                "kcmkwm",  # similar to xfwm4
+                "xfwm4",  # similar to xfwm4
+                "preferences-desktop-default-applications",  # diamond&hearts
+                "terminal",
+                "gnome-terminal",
+                "konsole",
+                "text-editor",
+                "accessories-text-editor",
+            ]
+            # Do not leave it blank
+            #   (blank is invisible & minimum width in Cinnamon taskbar)!
+            # icon_path = "text-editor"
+            icon_path = "terminal"
+            for try_icon in try_icons:
+                if which_pixmap(try_icon, refresh=False):
+                    icon_path = try_icon
+                    break
     if "Godot" in caption:
         caption = caption.replace(" stable", "")
         # ^ otherwise both "stable mono" and "stable" icons will always
