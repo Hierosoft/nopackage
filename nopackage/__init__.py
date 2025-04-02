@@ -54,6 +54,7 @@ nopackage help
 '''
 from __future__ import print_function
 
+from collections import OrderedDict
 import sys
 import stat
 import os
@@ -169,6 +170,7 @@ version_chars = digits + "."
 
 known_icons = [  # Look in ../misc or ../share/icons for these
     "multicraft-xorg-icon-128.png",
+    "openxcom_48x48.png",
 ]
 platform_luid_local_icons = {
     # look in ../misc or ../share/icons *if* matching os *and* luid
@@ -241,6 +243,7 @@ iconLinks['foundryvtt'] = "https://foundryvtt.com/static/assets/icons/fvtt.png"
 iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/branch/master/basilisk/branding/unofficial/default48.png"  # noqa: E501
 iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"  # noqa: E501
 iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"  # noqa: E501
+iconLinks['redot'] = "https://github.com/Redot-Engine/redot-engine/blob/master/main/app_icon.png?raw=true"  # noqa: E501
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
@@ -332,6 +335,15 @@ shortcutMetas = {
         'StartupNotify': "false",
         'Keywords': "sandbox;world;mining;crafting;blocks;nodes;multiplayer;roleplaying;",  # noqa E501
     },
+    'gimp': OrderedDict(  # NOTE: In Python 2 ctor args do not end up in order!
+        # Exec="{Exec} %U"  # TODO: add %U
+        # TryExec="{Exec}"  # TODO: add?
+        Categories="Graphics;2DGraphics;RasterGraphics;GTK;",
+        StartupNotify="true",
+        MimeType="image/bmp;image/g3fax;image/gif;image/x-fits;image/x-pcx;image/x-portable-anymap;image/x-portable-bitmap;image/x-portable-graymap;image/x-portable-pixmap;image/x-psd;image/x-sgi;image/x-tga;image/x-xbitmap;image/x-xwindowdump;image/x-xcf;image/x-compressed-xcf;image/x-gimp-gbr;image/x-gimp-pat;image/x-gimp-gih;image/x-sun-raster;image/tiff;image/jpeg;image/x-psp;application/postscript;image/png;image/x-icon;image/x-xpixmap;image/x-exr;image/webp;image/x-webp;image/heif;image/heic;image/avif;image/jxl;image/svg+xml;application/pdf;image/x-wmf;image/jp2;image/x-xcursor;",  # noqa E501
+    ),
+    # TODO: MimeType change may require `update-desktop-database ~/.local/share/applications/`
+    #   for "Open With" to show the application.
 }
 shortcutMetas['finetest'] = copy.deepcopy(shortcutMetas['minetest'])
 shortcutMetas['finetest']['Keywords'] += "minetest;"
@@ -3468,6 +3480,7 @@ def install_program_in_place(src_path, **kwargs):
                              "apps"),  # such as org.zrythm.Zrythm.svg
                 os.path.join(tryVenv, "share", "icons"),  # virtualenv
                 os.path.join(tryVenv, "misc"),  # minetest
+                os.path.join(tryVenv, "res", "linux", "icons"),  # OpenXcom
             ]
             luid_local_icons = platform_luid_local_icons[platform.system()]
             known_icons = None
@@ -3814,6 +3827,10 @@ def main():
                 verbosity = 1
             elif arg == "--debug":
                 verbosity = 2
+            elif arg == "--reinstall":
+                # alternate syntax:
+                # install --reinstall = reinstall
+                enable_reinstall = True
             else:
                 print("ERROR: '{}' is not a valid option.".format(arg))
                 return 1
@@ -3825,6 +3842,9 @@ def main():
             else:
                 print("A 3rd parameter is unexpected: '{}'".format(arg))
                 return 1
+    if enable_reinstall:
+        # install --reinstall = reinstall
+        command = "reinstall"
     if command is None:
         usage()
         echo0("")
