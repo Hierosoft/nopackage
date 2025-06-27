@@ -244,6 +244,7 @@ iconLinks['basilisk'] = "https://repo.palemoon.org/Basilisk-Dev/Basilisk/raw/bra
 iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blob/main/icon.png?raw=true"  # noqa: E501
 iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"  # noqa: E501
 iconLinks['redot'] = "https://github.com/Redot-Engine/redot-engine/blob/master/main/app_icon.png?raw=true"  # noqa: E501
+iconLinks['lm.studio'] = "https://avatars.githubusercontent.com/u/133744619?s=48&v=4"
 
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
@@ -252,6 +253,7 @@ iconNames = {
     'pcsx2': "pcsx2",  # since the icon is called "AppIconLarge.png"
     # noqa E501 'qortal': "qortal",  # since the only known square icon is https://wiki.qortal.org/lib/exe/fetch.php?media=wiki:logo.png
     # ^ commented since URL has 403 (icon is in "shortcut-metadata" dir now)
+    'lm.studio': "lmstudio.png", # since iconLinks entry has no filename.
 }
 # ^ A list of icon names where the downloaded file should be renamed.
 # ^ Also generated names are put here during module load!
