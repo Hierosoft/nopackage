@@ -92,9 +92,12 @@ from hierosoft.moreplatform import (
     which_pixmap,
 )
 
-from hierosoft import (  # noqa F401
+from hierosoft.moresix import (
     CompletedProcess,
     subprocess,
+)
+
+from hierosoft import (  # noqa F401
     echo0,
     echo1,
     echo2,
