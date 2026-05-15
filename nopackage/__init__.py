@@ -248,7 +248,12 @@ iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blo
 iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"  # noqa: E501
 iconLinks['redot'] = "https://github.com/Redot-Engine/redot-engine/blob/master/main/app_icon.png?raw=true"  # noqa: E501
 iconLinks['lm.studio'] = "https://avatars.githubusercontent.com/u/133744619?s=48&v=4"
-
+if platform.system() == "Windows":
+    iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.ico"
+elif platform.system() == "Darwin":
+    iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.icns"
+else:
+    iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.png"
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
