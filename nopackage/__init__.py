@@ -175,21 +175,27 @@ known_icons = [  # Look in ../misc or ../share/icons for these
     "multicraft-xorg-icon-128.png",
     "openxcom_48x48.png",
 ]
+luid_internal_icon_dirs = {  # relative to the bin file
+    'ladybird': os.path.join("share", "Lagom", "icons", "128x128"),
+}
 platform_luid_local_icons = {
     # look in ../misc or ../share/icons *if* matching os *and* luid
     "Linux": {
         "finetest": ["multicraft-xorg-icon-128.png",],
         "minetest": ["minetest.svg",],
+        'ladybird': ["app-browser.png"],  # or app-browser-dark.png
     },
     "Darwin": {
         "finetest": ["minetest-icon.icns",],  # TODO: Use different one.
         "minetest": ["minetest-icon.icns",],
+        'ladybird': ["app-browser.png"],  # or app-browser-dark.png
     },
     "Windows": {
         "finetest": ["multicraft-icon.ico",],
         # ^ finetest also now has doc/mkdocs/docs/img/favicon.ico
         #   (does it require building docs first?)
         "minetest": ["minetest-icon.ico",],
+        'ladybird': ["app-browser.png"],  # or app-browser-dark.png
     },
 }
 
@@ -423,6 +429,7 @@ casedNames = {  # A list of correct icon captions indexed by LUID
     'multicraft': "MultiCraft",  # C only capitalized for game, not MC hosting
     'boscaceoil.blue': "Bosca Ceoil Blue",
     'stargatedaw': "StargateDAW",
+    'ladybird': "Ladybird",
 }
 annotations = {  # Add a parenthetical to the shortcut caption.
     '.deb': "deb",
@@ -430,7 +437,7 @@ annotations = {  # Add a parenthetical to the shortcut caption.
 }
 
 
-known_binaries = ["RunAwesomeBump.sh", "monero-wallet-gui"]
+known_binaries = ["RunAwesomeBump.sh", "monero-wallet-gui", "Ladybird"]
 # ^ Allows finding the name in edge cases
 #   (The version and name aren't separable in
 #   AwesomeBumpV5.Bin64Linux.tar.gz)
@@ -3492,6 +3499,9 @@ def install_program_in_place(src_path, **kwargs):
                 os.path.join(tryVenv, "misc"),  # minetest
                 os.path.join(tryVenv, "res", "linux", "icons"),  # OpenXcom
             ]
+            known_icon_dir = luid_internal_icon_dirs.get(luid)
+            if known_icon_dir:
+                tryIconsDirs.append(os.path.join(tryVenv, known_icon_dir))
             luid_local_icons = platform_luid_local_icons[platform.system()]
             known_icons = None
             if luid_local_icons is not None:
