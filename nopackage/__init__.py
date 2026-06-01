@@ -467,35 +467,43 @@ Type=Application
 """
 
 
-def is_binary(filepath, blocksize=1024):
-    if not os.path.isfile(filepath):
+def is_binary(path, blocksize=1024, reraise=False):
+    if not os.path.isfile(path):
         # Mimic python3 behavior in 2 or 3
         #   (give specific exception before ambiguous IOError)
         raise FileNotFoundError(
-            "[Errno 2] No such file or directory: {}".format(repr(filepath)))
+            "[Errno 2] No such file or directory: {}".format(repr(path)))
     try:
-        with open(filepath, "rb") as f:
+        with open(path, "rb") as f:
             while True:
                 chunk = f.read(blocksize)
                 if b"\x00" in chunk:
                     return True
+    # except PermissionError as ex:
+    #     # PermissionError: [Errno 1] Operation not permitted
+    #     # or Python 2:
+    #     # IOError: [Errno 13] Permission denied: '...'
+    #     if not silent:
+    #         print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
+    #     if reraise:
+    #         raise
     except IOError as ex:
         print("is_binary: False ({})".format(ex))
+        if reraise:
+            raise
         return False
-
-
-def filename_from_url(url):
-    parsed = urlparse(url)
-    # ^ urllib.parse.ParseResult
-    path = parsed.path
-    directory, name = os.path.split(path)
-    return name
 
 
 def mark_executable(path, silent=False, reraise=False):
     """Allow all permissions for user,
     but group & others can only execute & read.
     """
+    if not os.path.exists(path):
+        # Can be file or directory (must mark X to open it!)
+        # Mimic python3 behavior in 2 or 3
+        #   (give specific exception before ambiguous IOError)
+        raise FileNotFoundError(
+            "[Errno 2] No such file or directory: {}".format(repr(path)))
     try:
         # os.chmod(path, (stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
         #                 | stat.S_IROTH | stat.S_IXOTH))
@@ -508,6 +516,8 @@ def mark_executable(path, silent=False, reraise=False):
         return True
     except PermissionError as ex:
         # PermissionError: [Errno 1] Operation not permitted
+        # or Python 2:
+        # IOError: [Errno 13] Permission denied: '...'
         if not silent:
             print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
         if reraise:
@@ -517,6 +527,11 @@ def mark_executable(path, silent=False, reraise=False):
 
 def mark_user_shared(path, silent=False, reraise=False):
     """Mark writable by user and readable by others"""
+    if not os.path.exists(path):
+        # Mimic python3 behavior in 2 or 3
+        #   (give specific exception before ambiguous IOError)
+        raise FileNotFoundError(
+            "[Errno 2] No such file or directory: {}".format(repr(path)))
     try:
         # os.chmod(path, (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
         #                 | stat.S_IWUSR))
@@ -528,11 +543,21 @@ def mark_user_shared(path, silent=False, reraise=False):
         return True
     except PermissionError as ex:
         # PermissionError: [Errno 1] Operation not permitted
+        # or Python 2:
+        # IOError: [Errno 13] Permission denied: '...'
         if not silent:
             print("{}: {}".format(type(ex).__name__, ex), file=sys.stderr)
         if reraise:
             raise
     return False
+
+
+def filename_from_url(url):
+    parsed = urlparse(url)
+    # ^ urllib.parse.ParseResult
+    path = parsed.path
+    directory, name = os.path.split(path)
+    return name
 
 
 def format_shortcut(shortcut_data, meta, path=None, add_all=True):
