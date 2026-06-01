@@ -74,6 +74,7 @@ else:
     import urlparse  # type: ignore
     # import errno
     FileExistsError = OSError  # if ex.errno == errno.EEXIST
+    FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
 
 if __name__ == "__main__":
@@ -254,8 +255,10 @@ iconLinks['boscaceoil.blue'] = "https://github.com/YuriSizov/boscaceoil-blue/blo
 iconLinks['stargate'] = "https://github.com/stargatedaw/stargate/blob/main/src/appimage/python-appimage/stargate/stargate.png?raw=true"  # noqa: E501
 iconLinks['redot'] = "https://github.com/Redot-Engine/redot-engine/blob/master/main/app_icon.png?raw=true"  # noqa: E501
 iconLinks['lm.studio'] = "https://avatars.githubusercontent.com/u/133744619?s=48&v=4"
+iconLinks['redot'] = "https://raw.githubusercontent.com/Redot-Engine/redot-engine/refs/heads/master/icon.png"
 if platform.system() == "Windows":
     iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.ico"
+    iconLinks['redot'] = "https://raw.githubusercontent.com/Redot-Engine/redot-engine/24c47aba5220b2d0874199648885e49832ea6cd1/platform/windows/redot.ico"
 elif platform.system() == "Darwin":
     iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.icns"
 else:
@@ -464,6 +467,23 @@ Type=Application
 """
 
 
+def is_binary(filepath, blocksize=1024):
+    if not os.path.isfile(filepath):
+        # Mimic python3 behavior in 2 or 3
+        #   (give specific exception before ambiguous IOError)
+        raise FileNotFoundError(
+            "[Errno 2] No such file or directory: {}".format(repr(filepath)))
+    try:
+        with open(filepath, "rb") as f:
+            while True:
+                chunk = f.read(blocksize)
+                if b"\x00" in chunk:
+                    return True
+    except IOError as ex:
+        print("is_binary: False ({})".format(ex))
+        return False
+
+
 def filename_from_url(url):
     parsed = urlparse(url)
     # ^ urllib.parse.ParseResult
@@ -477,8 +497,14 @@ def mark_executable(path, silent=False, reraise=False):
     but group & others can only execute & read.
     """
     try:
-        os.chmod(path, (stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
-                        | stat.S_IROTH | stat.S_IXOTH))
+        # os.chmod(path, (stat.S_IRWXU | stat.S_IXGRP | stat.S_IRGRP
+        #                 | stat.S_IROTH | stat.S_IXOTH))
+        bits = os.stat(path).st_mode
+        # bits = bits | (stat.S_IRWXU | stat.S_IXGRP
+        #                | stat.S_IRGRP
+        #                | stat.S_IROTH | stat.S_IXOTH)
+        bits = bits | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(path, bits)
         return True
     except PermissionError as ex:
         # PermissionError: [Errno 1] Operation not permitted
@@ -492,9 +518,13 @@ def mark_executable(path, silent=False, reraise=False):
 def mark_user_shared(path, silent=False, reraise=False):
     """Mark writable by user and readable by others"""
     try:
-        os.chmod(path, (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
-                        | stat.S_IWUSR))
+        # os.chmod(path, (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
+        #                 | stat.S_IWUSR))
+        bits = os.stat(path).st_mode
         # S_IREAD: "Unix V7 synonym for S_IRUSR."
+        bits = bits | (stat.S_IROTH | stat.S_IREAD | stat.S_IRGRP
+                       | stat.S_IWUSR)
+        os.chmod(path, bits)
         return True
     except PermissionError as ex:
         # PermissionError: [Errno 1] Operation not permitted
@@ -1908,10 +1938,14 @@ class PackageInfo:
         return str(self.toDict())
 
 
-def dir_is_empty(folder_path):
+def dir_is_empty(folder_path, quiet=True):
     count = 0
     sub_names = os.listdir(folder_path)
+    if not quiet:
+        print("{}:".format(os.path.realpath(folder_path)))
     for sub_name in sub_names:
+        if not quiet:
+            print("  "+sub_name)
         count += 1
     return count < 1
 
@@ -2597,11 +2631,15 @@ def install_program_in_place(src_path, **kwargs):
         print("* extracting '{}'...".format(src_path))
         if ar_cat == "tar":
             tar = tarfile.open(src_path)
+            assert dir_is_empty(ex_tmp, quiet=False)
             tar.extractall(path=ex_tmp)
+            assert not dir_is_empty(ex_tmp, quiet=False)
             tar.close()
         elif ar_cat == "zip":
+            assert dir_is_empty(ex_tmp, quiet=False)
             with ZipFile(src_path, 'r') as zipfile:
                 zipfile.extractall(path=ex_tmp)
+            assert not dir_is_empty(ex_tmp, quiet=False)
         else:
             raise NotImplementedError("There is no case for " + ar_cat)
         print("* extracted '{}'".format(ex_tmp))
@@ -2622,6 +2660,9 @@ def install_program_in_place(src_path, **kwargs):
             print("* detected program path '{}'".format(dirpath))
             new_tmp = tempfile.mkdtemp()
             dirpath = os.path.join(new_tmp, dirname)
+            print("mv {} {}".format(repr(ex_tmp), repr(dirpath)))
+            assert not os.path.exists(dirpath), \
+                "You must first remove {}".format(repr(dirpath))
             shutil.move(ex_tmp, dirpath)
             print("* changed temp program path to '{}'".format(dirpath))
         src_path = dirpath
@@ -2680,11 +2721,17 @@ def install_program_in_place(src_path, **kwargs):
         if got_path is not None:
             print("* detected binary: '{}'".format(got_path))
             src_path = got_path
+            if move_what == 'file':
+                print("Changing move operation from file to directory.")
+                move_what = 'directory'
         else:
             all_files = os.listdir(src_path)
             scripts = []
             jars = []
+            print("Binary not detected. Looking for any binary in {}"
+                  .format(repr(src_path)))
             for sub in all_files:
+                print("  * {}".format(repr(sub)))
                 sub_path = os.path.join(src_path, sub)
                 ext = os.path.splitext(sub)[1].strip(".")
                 if sub.startswith("."):
@@ -2709,6 +2756,24 @@ def install_program_in_place(src_path, **kwargs):
                     logger.warning(
                         "SKIPPED \"{}\" since not executable, jar, nor {}."
                         .format(sub_path, PackageInfo.BIN_EXTS))
+            if len(scripts) == 0:
+                for f in all_files:
+                    assert os.path.exists(os.path.join(src_path, f))
+                    assert os.path.isfile(os.path.join(src_path, f)), \
+                        "not file: {}".format(os.path.join(src_path, f))
+                if len(all_files) == 1:
+                    path0 = os.path.join(src_path, all_files[0])
+                    if is_binary(path0):
+                        print("Detected {} as binary"
+                              " (only file, but was not executable)."
+                              .format(repr(path0)))
+                        scripts.append(path0)
+                        mark_executable(path0)
+                    else:
+                        print("{} is not binary".format(repr(path0)))
+            else:
+                print("Found script(s): {}".format(scripts))
+
             if len(scripts) >= 2:
                 bad_indices = []
                 good_indices = []
@@ -3769,10 +3834,7 @@ def install_program_in_place(src_path, **kwargs):
                     sys.stderr.write(
                         "* marking \"{}\" as executable..."
                         .format(dst_bin_path))
-                    os.chmod(
-                        dst_bin_path, stat.S_IRWXU | stat.S_IXGRP
-                        | stat.S_IRGRP
-                        | stat.S_IROTH | stat.S_IXOTH)
+                    mark_executable(dst_bin_path)
                     print("OK", file=sys.stderr)
                 else:
                     print(
