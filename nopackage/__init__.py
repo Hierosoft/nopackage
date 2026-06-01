@@ -3401,15 +3401,32 @@ def install_program_in_place(src_path, **kwargs):
                     if not os.path.isfile(src_path) and pull_back:
                         print("mv \"{}\" \"{}\""
                               "".format(dst_path, src_path))
+                        recovered_path = src_path
+                        if os.path.isdir(src_path):
+                            # REVERSE path (uninstall) may still have
+                            #   the problem of the src_path existing,
+                            #   but allow invalid nesting in this case
+                            #   to ensure uninstall works (location is
+                            #   not critical in the case of uninstall).
+                            recovered_path = os.path.join(
+                                src_path,
+                                os.path.basename(dst_path),
+                            )
                         shutil.move(dst_path, src_path)
+                        if not os.path.exists(recovered_path):
+                            if os.path.exists(src_path):
+                                logger.warning("Expected dest {} got {}"
+                                               .format(repr(recovered_path),
+                                                       repr(src_path)))
+                                recovered_path = src_path
                         logLn("uninstall_file:{}".format(dst_path))
-                        logLn("recovered_to:{}".format(src_path))
+                        logLn("recovered_to:{}".format(recovered_path))
                         setProgramValue(luid, 'installed', False)
-                        setProgramValue(luid, 'src_path', src_path)
+                        setProgramValue(luid, 'src_path', recovered_path)
                         if src_path == dst_path:
                             print("The source path"
                                   " \"{}\" was moved to \"{}\"."
-                                  "".format(dst_path, src_path))
+                                  "".format(dst_path, recovered_path))
                     else:
                         if pull_back:
                             print("* the file is already recovered at"
