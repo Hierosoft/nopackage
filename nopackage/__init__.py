@@ -263,6 +263,8 @@ elif platform.system() == "Darwin":
     iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.icns"
 else:
     iconLinks['orcaslicer'] = "https://github.com/OrcaSlicer/OrcaSlicer/raw/refs/heads/main/resources/images/OrcaSlicer.png"
+iconLinks['es'] = "https://gitlab.com/es-de/emulationstation-de/-/raw/master/resources/graphics/window_icon_256.png"
+# ^ EmulationStation Desktop Edition
 iconNames = {
     'godot': "godot",  # since the file is named "app_icon.png"
     'ninja-ide': "ninja-ide",  # since the file is named "icon.png"
